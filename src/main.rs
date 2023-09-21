@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
-enum Rule {
+enum RuleKind {
     Terminal(String),
     Alias(String),
     Recursion(String),
@@ -9,50 +9,26 @@ enum Rule {
     Choice(Vec<Rule>),
 }
 
-macro_rules! terminal {
-    ($token:expr) => {
-        Rule::Terminal($token.into())
-    };
-}
-
-macro_rules! alias {
-    ($alias:expr) => {
-        Rule::Alias($alias.into())
-    };
-}
-
-macro_rules! recursion {
-    ($alias:expr) => {
-        Rule::Recursion($alias.into())
-    };
-}
-
-macro_rules! sequence {
-    ($($x:expr),*) => {
-        Rule::Sequence(vec![$($x),*])
-    };
-}
-
-macro_rules! choice {
-    ($($x:expr),*) => {
-        Rule::Choice(vec![$($x),*])
-    };
+#[derive(Debug, Clone)]
+struct Rule {
+    kind: RuleKind,
+    node_name: String,
 }
 
 impl Rule {
     fn simplify(&self, grammar: &Grammar) -> (Rule, bool) {
-        match self {
+        match &self.kind {
             // Terminals are already simplified.
-            Rule::Terminal(_) => (self.clone(), true),
+            RuleKind::Terminal(_) => (self.clone(), true),
 
             // Aliases simplify to a copy of the rule they are aliasing.
-            Rule::Alias(alias) => (grammar.rules.get(alias).unwrap().clone(), false),
+            RuleKind::Alias(alias) => (grammar.rules.get(alias).unwrap().clone(), false),
 
             // Recursion rules cannot be simplified.
-            Rule::Recursion(_) => (self.clone(), true),
+            RuleKind::Recursion(_) => (self.clone(), true),
 
             // Sequences simplify to a copy where all entries are simplified.
-            Rule::Sequence(entries) => match entries.len() {
+            RuleKind::Sequence(entries) => match entries.len() {
                 1 => return entries.first().unwrap().simplify(grammar),
                 _ => {
                     let mut simplified = Vec::new();
@@ -63,7 +39,7 @@ impl Rule {
                         is_simplified &= rule_simplified;
 
                         // Check if the entry is a sequence and flatten it.
-                        if let Rule::Sequence(sub_entries) = simplified_rule {
+                        if let RuleKind::Sequence(sub_entries) = simplified_rule.kind {
                             simplified.extend(sub_entries);
                             is_simplified = false;
                         } else {
@@ -71,12 +47,18 @@ impl Rule {
                         }
                     }
 
-                    (Rule::Sequence(simplified), is_simplified)
+                    (
+                        Rule {
+                            kind: RuleKind::Sequence(simplified),
+                            node_name: self.node_name.clone(),
+                        },
+                        is_simplified,
+                    )
                 }
             },
 
             // Choices simplify to a copy where all choices are simplified.
-            Rule::Choice(choices) => match choices.len() {
+            RuleKind::Choice(choices) => match choices.len() {
                 1 => return choices.first().unwrap().simplify(grammar),
                 _ => {
                     let mut simplified = Vec::new();
@@ -88,38 +70,44 @@ impl Rule {
                         simplified.push(simplified_rule.0);
                     }
 
-                    (Rule::Choice(simplified), is_simplified)
+                    (
+                        Rule {
+                            kind: RuleKind::Choice(simplified),
+                            node_name: self.node_name.clone(),
+                        },
+                        is_simplified,
+                    )
                 }
             },
         }
     }
 
     fn discover_roots(&self, roots: &mut HashMap<String, Rule>, grammar: &Grammar) {
-        match self {
+        match &self.kind {
             // Terminals do not have any roots to discover.
-            Rule::Terminal(_) => {}
+            RuleKind::Terminal(_) => {}
 
             // Alias roots are found by simply traversing the aliased rule.
-            Rule::Alias(alias) => grammar
+            RuleKind::Alias(alias) => grammar
                 .rules
                 .get(alias)
                 .unwrap()
                 .discover_roots(roots, grammar),
 
             // Recursion rules are roots. So we add the alias to the roots with a clone of the aliased rule.
-            Rule::Recursion(alias) => {
+            RuleKind::Recursion(alias) => {
                 roots.insert(alias.clone(), grammar.rules.get(alias).unwrap().clone());
             }
 
             // Sequence roots are found by traversing all the rules in the sequence.
-            Rule::Sequence(entries) => {
+            RuleKind::Sequence(entries) => {
                 for entry in entries {
                     entry.discover_roots(roots, grammar);
                 }
             }
 
             // Choice roots are found by traversing all the rules in the choice.
-            Rule::Choice(choices) => {
+            RuleKind::Choice(choices) => {
                 for choice in choices {
                     choice.discover_roots(roots, grammar);
                 }
@@ -142,21 +130,21 @@ impl Grammar {
         }
     }
 
-    fn entry_rule(mut self, name: &str, rule: Rule) -> Grammar {
-        self.entry = Some(name.into());
-        self.rules.insert(name.into(), rule);
+    fn entry_rule(mut self, rule: Rule) -> Grammar {
+        self.entry = Some(rule.node_name.clone());
+        self.rules.insert(rule.node_name.clone(), rule);
         self
     }
 
-    fn define_rule(mut self, name: &str, rule: Rule) -> Grammar {
-        self.rules.insert(name.into(), rule);
+    fn define_rule(mut self, rule: Rule) -> Grammar {
+        self.rules.insert(rule.node_name.clone(), rule);
         self
     }
 
     fn simplify(self) -> Grammar {
         let entry_name = self.entry.clone().unwrap();
         let entry = self.rules.get(&entry_name).unwrap();
-        let mut roots = self.find_root_rules((entry_name.clone(), entry.clone()));
+        let mut roots = self.find_root_rules(entry);
 
         loop {
             let mut simplified = true;
@@ -181,51 +169,121 @@ impl Grammar {
         }
     }
 
-    fn find_root_rules(&self, entry: (String, Rule)) -> HashMap<String, Rule> {
+    fn find_root_rules(&self, entry: &Rule) -> HashMap<String, Rule> {
         let mut roots = HashMap::new();
 
-        entry.1.discover_roots(&mut roots, self);
+        entry.discover_roots(&mut roots, self);
 
-        roots.insert(entry.0.clone(), entry.1.clone());
+        roots.insert(entry.node_name.clone(), entry.clone());
         roots
     }
 }
 
 fn main() {
-    let mut grammar = Grammar::default()
-        .entry_rule("expr", sequence!(alias!("term"), alias!("expr'")))
-        .define_rule(
-            "expr'",
-            choice!(
-                sequence!(terminal!("PLUS"), alias!("term"), recursion!("expr'")),
-                sequence!(terminal!("MINUS"), alias!("term"), recursion!("expr'")),
-                terminal!("EOF")
-            ),
+    let mut grammar = Grammar::default();
+    let mut node_name;
+
+    macro_rules! entry {
+        ($node:expr, $rule:expr) => {
+            node_name = $node;
+            grammar = grammar.entry_rule($rule);
+        };
+    }
+
+    macro_rules! rule {
+        ($node:expr, $rule:expr) => {
+            node_name = $node;
+            grammar = grammar.define_rule($rule);
+        };
+    }
+
+    macro_rules! terminal {
+        ($token:expr) => {
+            Rule {
+                kind: RuleKind::Terminal($token.into()),
+                node_name: node_name.into(),
+            }
+        };
+    }
+
+    macro_rules! alias {
+        ($alias:expr) => {
+            Rule {
+                kind: RuleKind::Alias($alias.into()),
+                node_name: node_name.into(),
+            }
+        };
+    }
+
+    macro_rules! recursion {
+        ($alias:expr) => {
+            Rule {
+                kind: RuleKind::Recursion($alias.into()),
+                node_name: node_name.into(),
+            }
+        };
+    }
+
+    macro_rules! sequence {
+        ($($x:expr),*) => {
+            Rule {
+                kind: RuleKind::Sequence(vec![$($x),*]),
+                node_name: node_name.into(),
+            }
+        };
+    }
+
+    macro_rules! choice {
+        ($($x:expr),*) => {
+            Rule {
+                kind: RuleKind::Choice(vec![$($x),*]),
+                node_name: node_name.into(),
+            }
+        };
+    }
+
+    entry!("expr", sequence!(alias!("term"), alias!("expr'")));
+
+    rule!(
+        "expr'",
+        choice!(
+            sequence!(terminal!("PLUS"), alias!("term"), recursion!("expr'")),
+            sequence!(terminal!("MINUS"), alias!("term"), recursion!("expr'")),
+            terminal!("EOF")
         )
-        .define_rule("term", sequence!(alias!("factor"), alias!("term'")))
-        .define_rule(
-            "term'",
-            choice!(
-                sequence!(terminal!("TIMES"), alias!("factor"), recursion!("term'")),
-                sequence!(terminal!("DIVIDE"), alias!("factor"), recursion!("term'")),
-                terminal!("EOF")
-            ),
+    );
+
+    rule!("term", sequence!(alias!("factor"), alias!("term'")));
+
+    rule!(
+        "term'",
+        choice!(
+            sequence!(terminal!("TIMES"), alias!("factor"), recursion!("term'")),
+            sequence!(terminal!("DIVIDE"), alias!("factor"), recursion!("term'")),
+            terminal!("EOF")
         )
-        .define_rule(
-            "factor",
-            choice!(
-                sequence!(terminal!("MINUS"), recursion!("factor")),
-                alias!("atom")
-            ),
+    );
+
+    rule!(
+        "factor",
+        choice!(
+            sequence!(terminal!("MINUS"), recursion!("factor")),
+            alias!("atom")
         )
-        .define_rule(
-            "atom",
-            choice!(
-                terminal!("IDENT"),
-                terminal!("NUMBER"),
-                sequence!(terminal!("LPAREN"), recursion!("expr"), terminal!("RPAREN"))
-            ),
-        );
+    );
+
+    rule!(
+        "atom",
+        choice!(
+            terminal!("IDENT"),
+            terminal!("NUMBER"),
+            sequence!(
+                terminal!("L_PAREN"),
+                recursion!("expr"),
+                terminal!("R_PAREN")
+            )
+        )
+    );
 
     grammar = grammar.simplify();
     println!("{:#?}", grammar);
