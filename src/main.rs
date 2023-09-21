@@ -194,14 +194,36 @@ macro_rules! linked_list {
     };
 }
 
+#[derive(Debug)]
+enum ParseNodeKind {
+    Terminal(String),
+    NonTerminal(String),
+}
+
+#[derive(Debug)]
+struct ParseNode {
+    kind: ParseNodeKind,
+    depth: usize,
+    node_name: String,
+}
+
+#[derive(Debug)]
+struct ParseTree {
+    nodes: Vec<ParseNode>,
+}
+
 impl Grammar {
-    fn traverse(&self) {
+    fn traverse(&self) -> ParseTree {
+        // TODO: Currently a parse tree only uses the entry rule, but it needs to be done
+        // TODO: for all root rules.
         let entry_name = self.entry.clone().unwrap();
         let entry = self.rules.get(&entry_name).unwrap();
-        Grammar::breadth(entry);
+        Grammar::breadth(entry)
     }
 
-    fn breadth(node: &Rule) {
+    fn breadth(node: &Rule) -> ParseTree {
+        let mut parse_tree = ParseTree { nodes: Vec::new() };
+
         let mut queue = VecDeque::new();
         queue.push_back((node.clone(), 0));
 
@@ -209,13 +231,21 @@ impl Grammar {
             let (node, depth) = queue.pop_front().unwrap();
 
             match &node.kind {
-                RuleKind::Terminal(token) => {
-                    println!("{} at depth {} {}.", token, depth, node.node_name)
-                }
-                // RuleKind::Recursion(_) => todo!(),
+                RuleKind::Terminal(token) => parse_tree.nodes.push(ParseNode {
+                    kind: ParseNodeKind::Terminal(token.clone()),
+                    depth,
+                    node_name: node.node_name,
+                }),
+                RuleKind::Recursion(alias) => parse_tree.nodes.push(ParseNode {
+                    kind: ParseNodeKind::NonTerminal(alias.clone()),
+                    depth,
+                    node_name: node.node_name,
+                }),
                 _ => Grammar::branch(node, &mut queue, depth),
             }
         }
+
+        parse_tree
     }
 
     fn branch(mut node: Rule, queue: &mut VecDeque<(Rule, usize)>, depth: usize) {
@@ -322,7 +352,5 @@ fn main() {
     rule!("struct", terminal!("STRUCT"));
 
     grammar = grammar.simplify();
-    std::fs::write("grammar.txt", format!("{:#?}", grammar)).unwrap();
-
-    grammar.traverse();
+    std::fs::write("grammar.txt", format!("{:#?}", grammar.traverse())).unwrap();
 }

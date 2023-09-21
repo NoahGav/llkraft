@@ -1,71 +1,46 @@
-Grammar {
-    entry: Some(
-        "program",
-    ),
-    rules: {
-        "program": Rule {
-            kind: Choice(
-                [
-                    Rule {
-                        kind: Sequence(
-                            [
-                                Rule {
-                                    kind: Terminal(
-                                        "EXPORT",
-                                    ),
-                                    node_name: "program",
-                                },
-                                Rule {
-                                    kind: Choice(
-                                        [
-                                            Rule {
-                                                kind: Terminal(
-                                                    "FN",
-                                                ),
-                                                node_name: "fn",
-                                            },
-                                            Rule {
-                                                kind: Terminal(
-                                                    "STRUCT",
-                                                ),
-                                                node_name: "struct",
-                                            },
-                                        ],
-                                    ),
-                                    node_name: "decl",
-                                },
-                            ],
-                        ),
-                        node_name: "program",
-                    },
-                    Rule {
-                        kind: Choice(
-                            [
-                                Rule {
-                                    kind: Terminal(
-                                        "FN",
-                                    ),
-                                    node_name: "fn",
-                                },
-                                Rule {
-                                    kind: Terminal(
-                                        "STRUCT",
-                                    ),
-                                    node_name: "struct",
-                                },
-                            ],
-                        ),
-                        node_name: "decl",
-                    },
-                    Rule {
-                        kind: Terminal(
-                            "EOF",
-                        ),
-                        node_name: "program",
-                    },
-                ],
+ParseTree {
+    nodes: [
+        ParseNode {
+            kind: Terminal(
+                "EOF",
             ),
+            depth: 0,
             node_name: "program",
         },
-    },
+        ParseNode {
+            kind: Terminal(
+                "EXPORT",
+            ),
+            depth: 0,
+            node_name: "program",
+        },
+        ParseNode {
+            kind: Terminal(
+                "FN",
+            ),
+            depth: 0,
+            node_name: "fn",
+        },
+        ParseNode {
+            kind: Terminal(
+                "STRUCT",
+            ),
+            depth: 0,
+            node_name: "struct",
+        },
+        ParseNode {
+            kind: Terminal(
+                "FN",
+            ),
+            depth: 1,
+            node_name: "fn",
+        },
+        ParseNode {
+            kind: Terminal(
+                "STRUCT",
+            ),
+            depth: 1,
+            node_name: "struct",
+        },
+    ],
 }
