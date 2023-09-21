@@ -2,18 +2,11 @@ use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 enum Rule {
-    Root(Box<Rule>),
     Terminal(String),
     Alias(String),
     Recursion(String),
     Sequence(Vec<Rule>),
     Choice(Vec<Rule>),
-}
-
-macro_rules! root {
-    ($root:expr) => {
-        Rule::Root(Box::new($root))
-    };
 }
 
 macro_rules! terminal {
@@ -47,31 +40,31 @@ macro_rules! choice {
 }
 
 impl Rule {
-    fn simplify(&self, grammar: &Grammar) -> Rule {
+    fn simplify(&self, grammar: &Grammar) -> (Rule, bool) {
         match self {
-            // Root rules are not directly simplified.
-            Rule::Root(_) => unreachable!(),
-
             // Terminals are already simplified.
-            Rule::Terminal(_) => self.clone(),
+            Rule::Terminal(_) => (self.clone(), true),
 
             // Aliases simplify to a copy of the rule they are aliasing.
-            Rule::Alias(alias) => grammar.rules.get(alias).unwrap().clone(),
+            Rule::Alias(alias) => (grammar.rules.get(alias).unwrap().clone(), false),
 
             // Recursion rules cannot be simplified.
-            Rule::Recursion(_) => self.clone(),
+            Rule::Recursion(_) => (self.clone(), true),
 
             // Sequences simplify to a copy where all entries are simplified.
             Rule::Sequence(entries) => match entries.len() {
                 1 => return entries.first().unwrap().simplify(grammar),
                 _ => {
                     let mut simplified = Vec::new();
+                    let mut is_simplified = true;
 
                     for entry in entries {
-                        simplified.push(entry.simplify(grammar));
+                        let simplified_rule = entry.simplify(grammar);
+                        is_simplified &= simplified_rule.1;
+                        simplified.push(simplified_rule.0);
                     }
 
-                    Rule::Sequence(simplified)
+                    (Rule::Sequence(simplified), is_simplified)
                 }
             },
 
@@ -80,12 +73,15 @@ impl Rule {
                 1 => return choices.first().unwrap().simplify(grammar),
                 _ => {
                     let mut simplified = Vec::new();
+                    let mut is_simplified = true;
 
                     for choice in choices {
-                        simplified.push(choice.simplify(grammar));
+                        let simplified_rule = choice.simplify(grammar);
+                        is_simplified &= simplified_rule.1;
+                        simplified.push(simplified_rule.0);
                     }
 
-                    Rule::Choice(simplified)
+                    (Rule::Choice(simplified), is_simplified)
                 }
             },
         }
@@ -93,9 +89,6 @@ impl Rule {
 
     fn discover_roots(&self, roots: &mut HashMap<String, Rule>, grammar: &Grammar) {
         match self {
-            // We don't directly search for roots from a root rule.
-            Rule::Root(_) => unreachable!(),
-
             // Terminals do not have any roots to discover.
             Rule::Terminal(_) => {}
 
@@ -130,14 +123,22 @@ impl Rule {
 
 #[derive(Debug)]
 struct Grammar {
+    entry: Option<String>,
     rules: HashMap<String, Rule>,
 }
 
 impl Grammar {
     fn default() -> Self {
         Self {
+            entry: None,
             rules: HashMap::new(),
         }
+    }
+
+    fn entry_rule(mut self, name: &str, rule: Rule) -> Grammar {
+        self.entry = Some(name.into());
+        self.rules.insert(name.into(), rule);
+        self
     }
 
     fn define_rule(mut self, name: &str, rule: Rule) -> Grammar {
@@ -145,41 +146,47 @@ impl Grammar {
         self
     }
 
-    fn simplify(self) {
-        let entry = self.find_entry_rule();
-        let roots = self.find_root_rules(entry);
+    fn simplify(self) -> Grammar {
+        let entry_name = self.entry.clone().unwrap();
+        let entry = self.rules.get(&entry_name).unwrap();
+        let mut roots = self.find_root_rules((entry_name.clone(), entry.clone()));
 
-        // TODO: Now fully simplify all roots.
+        loop {
+            let mut simplified = true;
+            let mut simplified_roots = HashMap::new();
 
-        println!("{:?}", roots);
-    }
+            for (name, rule) in &roots {
+                let simplification = rule.simplify(&self);
+                simplified &= simplification.1;
+                simplified_roots.insert(name.clone(), simplification.0);
+            }
 
-    fn find_entry_rule(&self) -> (String, &Rule) {
-        for (name, rule) in &self.rules {
-            match rule {
-                Rule::Root(rule) => return (name.clone(), rule),
-                _ => {}
+            roots = simplified_roots;
+
+            if simplified {
+                break;
             }
         }
 
-        unreachable!(
-            "No entry rule defined. Please define a singular entry rule using the 'root!(...)' macro."
-        )
+        Grammar {
+            entry: Some(entry_name),
+            rules: roots,
+        }
     }
 
-    fn find_root_rules(&self, entry: (String, &Rule)) -> HashMap<String, Rule> {
+    fn find_root_rules(&self, entry: (String, Rule)) -> HashMap<String, Rule> {
         let mut roots = HashMap::new();
 
         entry.1.discover_roots(&mut roots, self);
 
-        roots.insert(entry.0, entry.1.clone());
+        roots.insert(entry.0.clone(), entry.1.clone());
         roots
     }
 }
 
 fn main() {
-    let grammar = Grammar::default()
-        .define_rule("program", root!(alias!("expr")))
+    let mut grammar = Grammar::default()
+        .entry_rule("program", alias!("expr"))
         .define_rule(
             "expr",
             sequence!(
@@ -190,5 +197,6 @@ fn main() {
         )
         .define_rule("term", terminal!("IDENT"));
 
-    grammar.simplify();
+    grammar = grammar.simplify();
+    println!("{:#?}", grammar);
 }
