@@ -1,11 +1,11 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, LinkedList, VecDeque};
 
 #[derive(Debug, Clone)]
 enum RuleKind {
     Terminal(String),
     Alias(String),
     Recursion(String),
-    Sequence(Vec<Rule>),
+    Sequence(LinkedList<Rule>),
     Choice(Vec<Rule>),
 }
 
@@ -29,9 +29,9 @@ impl Rule {
 
             // Sequences simplify to a copy where all entries are simplified.
             RuleKind::Sequence(entries) => match entries.len() {
-                1 => return entries.first().unwrap().simplify(grammar),
+                1 => return entries.front().unwrap().simplify(grammar),
                 _ => {
-                    let mut simplified = Vec::new();
+                    let mut simplified = LinkedList::new();
                     let mut is_simplified = true;
 
                     for entry in entries {
@@ -43,7 +43,7 @@ impl Rule {
                             simplified.extend(sub_entries);
                             is_simplified = false;
                         } else {
-                            simplified.push(simplified_rule);
+                            simplified.push_back(simplified_rule);
                         }
                     }
 
@@ -179,6 +179,70 @@ impl Grammar {
     }
 }
 
+macro_rules! linked_list {
+    () => {
+        LinkedList::new()
+    };
+    ($($item:expr),+ $(,)?) => {
+        {
+            let mut list = LinkedList::new();
+            $(
+                list.push_back($item);
+            )+
+            list
+        }
+    };
+}
+
+impl Grammar {
+    fn traverse(&self) {
+        let entry_name = self.entry.clone().unwrap();
+        let entry = self.rules.get(&entry_name).unwrap();
+        Grammar::breadth(entry);
+    }
+
+    fn breadth(node: &Rule) {
+        let mut queue = VecDeque::new();
+        queue.push_back((node.clone(), 0));
+
+        while !queue.is_empty() {
+            let (node, depth) = queue.pop_front().unwrap();
+
+            match &node.kind {
+                RuleKind::Terminal(token) => {
+                    println!("{} at depth {} {}.", token, depth, node.node_name)
+                }
+                // RuleKind::Recursion(_) => todo!(),
+                _ => Grammar::branch(node, &mut queue, depth),
+            }
+        }
+    }
+
+    fn branch(mut node: Rule, queue: &mut VecDeque<(Rule, usize)>, depth: usize) {
+        match &mut node.kind {
+            RuleKind::Choice(choices) => {
+                for choice in choices {
+                    queue.push_back((choice.clone(), depth));
+                }
+            }
+            RuleKind::Sequence(entries) => {
+                if entries.len() > 0 {
+                    queue.push_back((entries.front().unwrap().clone(), depth));
+
+                    queue.push_back((
+                        Rule {
+                            kind: RuleKind::Sequence(entries.split_off(1)),
+                            node_name: node.node_name,
+                        },
+                        depth + 1,
+                    ));
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
 fn main() {
     let mut grammar = Grammar::default();
     let mut node_name;
@@ -227,7 +291,7 @@ fn main() {
     macro_rules! sequence {
         ($($x:expr),*) => {
             Rule {
-                kind: RuleKind::Sequence(vec![$($x),*]),
+                kind: RuleKind::Sequence(linked_list![$($x),*]),
                 node_name: node_name.into(),
             }
         };
@@ -260,11 +324,5 @@ fn main() {
     grammar = grammar.simplify();
     std::fs::write("grammar.txt", format!("{:#?}", grammar)).unwrap();
 
-    // TODO: The way is that nodes are non-terminals and branches are terminals.
-    // TODO: So, in this example grammar, the first node is the "program" and then
-    // TODO: it branches via all possible terminals. In this case, the set of all
-    // TODO: possible branches from the entry is "EXPORT", "FN", "STRUCT", "EOF".
-    // TODO: You can see that even though these terminals at different depths of
-    // TODO: the grammar tree they end up being branches in the same depth of the
-    // TODO: parse tree.
+    grammar.traverse();
 }
