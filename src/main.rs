@@ -2,10 +2,18 @@ use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 enum Rule {
+    Root(Box<Rule>),
     Terminal(String),
     Alias(String),
+    Recursion(String),
     Sequence(Vec<Rule>),
     Choice(Vec<Rule>),
+}
+
+macro_rules! root {
+    ($root:expr) => {
+        Rule::Root(Box::new($root))
+    };
 }
 
 macro_rules! terminal {
@@ -20,15 +28,21 @@ macro_rules! alias {
     };
 }
 
+macro_rules! recursion {
+    ($alias:expr) => {
+        Rule::Recursion($alias.into())
+    };
+}
+
 macro_rules! sequence {
-    ($x:expr, $($more:expr)*) => {
-        Rule::Sequence(vec![$x, $($more), *])
+    ($($x:expr),*) => {
+        Rule::Sequence(vec![$($x),*])
     };
 }
 
 macro_rules! choice {
-    ($x:expr, $($more:expr)*) => {
-        Rule::Choice(vec![$x, $($more), *])
+    ($($x:expr),*) => {
+        Rule::Choice(vec![$($x),*])
     };
 }
 
@@ -40,6 +54,9 @@ impl Rule {
 
             // Aliases simplify to a copy of the rule they are aliasing.
             Rule::Alias(alias) => grammar.rules.get(alias).unwrap().clone(),
+
+            // Recursion rules cannot be simplified.
+            Rule::Recursion(_) => self.clone(),
 
             // Sequences simplify to a copy where all entries are simplified.
             Rule::Sequence(entries) => match entries.len() {
@@ -111,6 +128,12 @@ impl Grammar {
 
                 unsimplified = true;
             }
+            Rule::Recursion(_) => {
+                // TODO: Recursion rules should have been replaced with a Root rule. Root
+                // TODO: rules are simplified separately. This should've been done in a
+                // TODO: preprocessing step.
+                unreachable!();
+            }
             Rule::Sequence(entries) => {
                 for entry in entries {
                     unsimplified |= self.traverse(entry, old);
@@ -128,18 +151,27 @@ impl Grammar {
 }
 
 fn main() {
+    // As you can see, the grammar starts with a single root rule.
+    // This is the entry rule. It also, represents the right recursion with a recursion rule.
+    // This will be preprocessed before simplification into two root rules (program and expr).
+    // Both program and expr will be fully simplified independently.
+    // Since, the expr rule expresses right recursion with the recursion alias rule
+    // that means there will be no stack overflow in the simplification process as recursion
+    // rules are not simplified further.
+
+    // TODO: Refactor the code now that we know how it works.
+
     let mut grammar = Grammar::default()
-        .define_rule("program", choice!(alias!("decl"), terminal!("EOF")))
+        .define_rule("program", root!(alias!("expr")))
         .define_rule(
-            "decl",
-            choice!(
-                sequence!(terminal!("EXPORT"), alias!("decl`")),
-                alias!("decl`")
+            "expr",
+            sequence!(
+                alias!("term"),
+                terminal!("PLUS"),
+                choice!(recursion!("expr"), terminal!("EOF"))
             ),
         )
-        .define_rule("decl`", choice!(alias!("fn"), alias!("struct")))
-        .define_rule("fn", terminal!("FN"))
-        .define_rule("struct", terminal!("STRUCT"));
+        .define_rule("term", terminal!("IDENT"));
 
     loop {
         let result = grammar.simplify();
