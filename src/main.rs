@@ -49,6 +49,9 @@ macro_rules! choice {
 impl Rule {
     fn simplify(&self, grammar: &Grammar) -> Rule {
         match self {
+            // Root rules are not directly simplified.
+            Rule::Root(_) => unreachable!(),
+
             // Terminals are already simplified.
             Rule::Terminal(_) => self.clone(),
 
@@ -87,6 +90,42 @@ impl Rule {
             },
         }
     }
+
+    fn discover_roots(&self, roots: &mut HashMap<String, Rule>, grammar: &Grammar) {
+        match self {
+            // We don't directly search for roots from a root rule.
+            Rule::Root(_) => unreachable!(),
+
+            // Terminals do not have any roots to discover.
+            Rule::Terminal(_) => {}
+
+            // Alias roots are found by simply traversing the aliased rule.
+            Rule::Alias(alias) => grammar
+                .rules
+                .get(alias)
+                .unwrap()
+                .discover_roots(roots, grammar),
+
+            // Recursion rules are roots. So we add the alias to the roots with a clone of the aliased rule.
+            Rule::Recursion(alias) => {
+                roots.insert(alias.clone(), grammar.rules.get(alias).unwrap().clone());
+            }
+
+            // Sequence roots are found by traversing all the rules in the sequence.
+            Rule::Sequence(entries) => {
+                for entry in entries {
+                    entry.discover_roots(roots, grammar);
+                }
+            }
+
+            // Choice roots are found by traversing all the rules in the choice.
+            Rule::Choice(choices) => {
+                for choice in choices {
+                    choice.discover_roots(roots, grammar);
+                }
+            }
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -106,62 +145,40 @@ impl Grammar {
         self
     }
 
-    fn simplify(self) -> (Grammar, bool) {
-        let program = self.rules.get("program").unwrap().simplify(&self);
+    fn simplify(self) {
+        let entry = self.find_entry_rule();
+        let roots = self.find_root_rules(entry);
 
-        let mut grammar = Grammar::default();
-        let unsimplified = grammar.traverse(&program, &self);
-        grammar = grammar.define_rule("program", program);
-        (grammar, unsimplified)
+        // TODO: Now fully simplify all roots.
+
+        println!("{:?}", roots);
     }
 
-    fn traverse(&mut self, rule: &Rule, old: &Grammar) -> bool {
-        let mut unsimplified = false;
-
-        match rule {
-            Rule::Terminal(_) => {}
-            Rule::Alias(alias) => {
-                let aliased = old.rules.get(alias).unwrap().clone();
-
-                self.traverse(&aliased, old);
-                self.rules.insert(alias.clone(), aliased);
-
-                unsimplified = true;
-            }
-            Rule::Recursion(_) => {
-                // TODO: Recursion rules should have been replaced with a Root rule. Root
-                // TODO: rules are simplified separately. This should've been done in a
-                // TODO: preprocessing step.
-                unreachable!();
-            }
-            Rule::Sequence(entries) => {
-                for entry in entries {
-                    unsimplified |= self.traverse(entry, old);
-                }
-            }
-            Rule::Choice(choices) => {
-                for choice in choices {
-                    unsimplified |= self.traverse(choice, old);
-                }
+    fn find_entry_rule(&self) -> (String, &Rule) {
+        for (name, rule) in &self.rules {
+            match rule {
+                Rule::Root(rule) => return (name.clone(), rule),
+                _ => {}
             }
         }
 
-        unsimplified
+        unreachable!(
+            "No entry rule defined. Please define a singular entry rule using the 'root!(...)' macro."
+        )
+    }
+
+    fn find_root_rules(&self, entry: (String, &Rule)) -> HashMap<String, Rule> {
+        let mut roots = HashMap::new();
+
+        entry.1.discover_roots(&mut roots, self);
+
+        roots.insert(entry.0, entry.1.clone());
+        roots
     }
 }
 
 fn main() {
-    // As you can see, the grammar starts with a single root rule.
-    // This is the entry rule. It also, represents the right recursion with a recursion rule.
-    // This will be preprocessed before simplification into two root rules (program and expr).
-    // Both program and expr will be fully simplified independently.
-    // Since, the expr rule expresses right recursion with the recursion alias rule
-    // that means there will be no stack overflow in the simplification process as recursion
-    // rules are not simplified further.
-
-    // TODO: Refactor the code now that we know how it works.
-
-    let mut grammar = Grammar::default()
+    let grammar = Grammar::default()
         .define_rule("program", root!(alias!("expr")))
         .define_rule(
             "expr",
@@ -173,15 +190,5 @@ fn main() {
         )
         .define_rule("term", terminal!("IDENT"));
 
-    loop {
-        let result = grammar.simplify();
-        grammar = result.0;
-
-        if !result.1 {
-            break;
-        }
-    }
-
-    grammar = grammar.simplify().0;
-    println!("{:#?}", grammar);
+    grammar.simplify();
 }
