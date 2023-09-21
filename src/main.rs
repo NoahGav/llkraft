@@ -59,9 +59,16 @@ impl Rule {
                     let mut is_simplified = true;
 
                     for entry in entries {
-                        let simplified_rule = entry.simplify(grammar);
-                        is_simplified &= simplified_rule.1;
-                        simplified.push(simplified_rule.0);
+                        let (simplified_rule, rule_simplified) = entry.simplify(grammar);
+                        is_simplified &= rule_simplified;
+
+                        // Check if the entry is a sequence and flatten it.
+                        if let Rule::Sequence(sub_entries) = simplified_rule {
+                            simplified.extend(sub_entries);
+                            is_simplified = false;
+                        } else {
+                            simplified.push(simplified_rule);
+                        }
                     }
 
                     (Rule::Sequence(simplified), is_simplified)
@@ -186,17 +193,43 @@ impl Grammar {
 
 fn main() {
     let mut grammar = Grammar::default()
-        .entry_rule("program", alias!("expr"))
+        .entry_rule("expr", sequence!(alias!("term"), alias!("expr'")))
         .define_rule(
-            "expr",
-            sequence!(
-                alias!("term"),
-                terminal!("PLUS"),
-                choice!(recursion!("expr"), terminal!("EOF"))
+            "expr'",
+            choice!(
+                sequence!(terminal!("PLUS"), alias!("term"), recursion!("expr'")),
+                sequence!(terminal!("MINUS"), alias!("term"), recursion!("expr'")),
+                terminal!("EOF")
             ),
         )
-        .define_rule("term", terminal!("IDENT"));
+        .define_rule("term", sequence!(alias!("factor"), alias!("term'")))
+        .define_rule(
+            "term'",
+            choice!(
+                sequence!(terminal!("TIMES"), alias!("factor"), recursion!("term'")),
+                sequence!(terminal!("DIVIDE"), alias!("factor"), recursion!("term'")),
+                terminal!("EOF")
+            ),
+        )
+        .define_rule(
+            "factor",
+            choice!(
+                sequence!(terminal!("MINUS"), recursion!("factor")),
+                alias!("atom")
+            ),
+        )
+        .define_rule(
+            "atom",
+            choice!(
+                terminal!("IDENT"),
+                terminal!("NUMBER"),
+                sequence!(terminal!("LPAREN"), recursion!("expr"), terminal!("RPAREN"))
+            ),
+        );
 
     grammar = grammar.simplify();
     println!("{:#?}", grammar);
+
+    // TODO: Need to traverse all root rules depth first. For each depth we emit each token or recursion that
+    // TODO: could possibly be matched at that depth on that branch. We can then use that tree to generate the parser.
 }
