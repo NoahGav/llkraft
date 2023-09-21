@@ -242,52 +242,29 @@ fn main() {
         };
     }
 
-    entry!("expr", sequence!(alias!("term"), alias!("expr'")));
-
-    rule!(
-        "expr'",
+    entry!(
+        "program",
         choice!(
-            sequence!(terminal!("PLUS"), alias!("term"), recursion!("expr'")),
-            sequence!(terminal!("MINUS"), alias!("term"), recursion!("expr'")),
+            sequence!(terminal!("EXPORT"), alias!("decl")),
+            alias!("decl"),
             terminal!("EOF")
         )
     );
 
-    rule!("term", sequence!(alias!("factor"), alias!("term'")));
+    rule!("decl", choice!(alias!("fn"), alias!("struct")));
 
-    rule!(
-        "term'",
-        choice!(
-            sequence!(terminal!("TIMES"), alias!("factor"), recursion!("term'")),
-            sequence!(terminal!("DIVIDE"), alias!("factor"), recursion!("term'")),
-            terminal!("EOF")
-        )
-    );
+    rule!("fn", terminal!("FN"));
 
-    rule!(
-        "factor",
-        choice!(
-            sequence!(terminal!("MINUS"), recursion!("factor")),
-            alias!("atom")
-        )
-    );
-
-    rule!(
-        "atom",
-        choice!(
-            terminal!("IDENT"),
-            terminal!("NUMBER"),
-            sequence!(
-                terminal!("L_PAREN"),
-                recursion!("expr"),
-                terminal!("R_PAREN")
-            )
-        )
-    );
+    rule!("struct", terminal!("STRUCT"));
 
     grammar = grammar.simplify();
-    println!("{:#?}", grammar);
+    std::fs::write("grammar.txt", format!("{:#?}", grammar)).unwrap();
 
-    // TODO: Need to traverse all root rules depth first. For each depth we emit each token or recursion that
-    // TODO: could possibly be matched at that depth on that branch. We can then use that tree to generate the parser.
+    // TODO: The way is that nodes are non-terminals and branches are terminals.
+    // TODO: So, in this example grammar, the first node is the "program" and then
+    // TODO: it branches via all possible terminals. In this case, the set of all
+    // TODO: possible branches from the entry is "EXPORT", "FN", "STRUCT", "EOF".
+    // TODO: You can see that even though these terminals at different depths of
+    // TODO: the grammar tree they end up being branches in the same depth of the
+    // TODO: parse tree.
 }

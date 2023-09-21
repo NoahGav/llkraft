@@ -1,0 +1,71 @@
+Grammar {
+    entry: Some(
+        "program",
+    ),
+    rules: {
+        "program": Rule {
+            kind: Choice(
+                [
+                    Rule {
+                        kind: Sequence(
+                            [
+                                Rule {
+                                    kind: Terminal(
+                                        "EXPORT",
+                                    ),
+                                    node_name: "program",
+                                },
+                                Rule {
+                                    kind: Choice(
+                                        [
+                                            Rule {
+                                                kind: Terminal(
+                                                    "FN",
+                                                ),
+                                                node_name: "fn",
+                                            },
+                                            Rule {
+                                                kind: Terminal(
+                                                    "STRUCT",
+                                                ),
+                                                node_name: "struct",
+                                            },
+                                        ],
+                                    ),
+                                    node_name: "decl",
+                                },
+                            ],
+                        ),
+                        node_name: "program",
+                    },
+                    Rule {
+                        kind: Choice(
+                            [
+                                Rule {
+                                    kind: Terminal(
+                                        "FN",
+                                    ),
+                                    node_name: "fn",
+                                },
+                                Rule {
+                                    kind: Terminal(
+                                        "STRUCT",
+                                    ),
+                                    node_name: "struct",
+                                },
+                            ],
+                        ),
+                        node_name: "decl",
+                    },
+                    Rule {
+                        kind: Terminal(
+                            "EOF",
+                        ),
+                        node_name: "program",
+                    },
+                ],
+            ),
+            node_name: "program",
+        },
+    },
+}
