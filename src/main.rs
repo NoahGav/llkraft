@@ -1,4 +1,8 @@
-use std::collections::{HashMap, LinkedList, VecDeque};
+use std::{
+    cell::RefCell,
+    collections::{HashMap, LinkedList, VecDeque},
+    rc::Rc,
+};
 
 #[derive(Debug, Clone)]
 enum RuleKind {
@@ -194,81 +198,90 @@ macro_rules! linked_list {
     };
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum ParseNodeKind {
+    Root,
     Terminal(String),
     NonTerminal(String),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct ParseNode {
     kind: ParseNodeKind,
-    depth: usize,
     node_name: String,
+    children: Vec<Rc<RefCell<ParseNode>>>,
 }
 
 #[derive(Debug)]
 struct ParseTree {
-    nodes: Vec<ParseNode>,
+    root: Rc<RefCell<ParseNode>>,
 }
 
 impl Grammar {
     fn traverse(&self) -> ParseTree {
-        // TODO: Currently a parse tree only uses the entry rule, but it needs to be done
-        // TODO: for all root rules.
         let entry_name = self.entry.clone().unwrap();
-        let entry = self.rules.get(&entry_name).unwrap();
-        Grammar::breadth(entry)
+        let entry = self.rules.get(&entry_name).unwrap().clone();
+
+        let root = Rc::new(RefCell::new(ParseNode {
+            kind: ParseNodeKind::Root,
+            node_name: entry_name,
+            children: Vec::new(),
+        }));
+
+        Grammar::traverse_rule(entry, root.clone());
+
+        ParseTree { root }
     }
 
-    fn breadth(node: &Rule) -> ParseTree {
-        let mut parse_tree = ParseTree { nodes: Vec::new() };
+    fn traverse_rule(rule: Rule, parent: Rc<RefCell<ParseNode>>) -> Rc<RefCell<ParseNode>> {
+        match rule.kind {
+            RuleKind::Terminal(token) => {
+                let node = Rc::new(RefCell::new(ParseNode {
+                    kind: ParseNodeKind::Terminal(token),
+                    node_name: rule.node_name,
+                    children: Vec::new(),
+                }));
 
-        let mut queue = VecDeque::new();
-        queue.push_back((node.clone(), 0));
+                parent.as_ref().borrow_mut().children.push(node.clone());
 
-        while !queue.is_empty() {
-            let (node, depth) = queue.pop_front().unwrap();
-
-            match &node.kind {
-                RuleKind::Terminal(token) => parse_tree.nodes.push(ParseNode {
-                    kind: ParseNodeKind::Terminal(token.clone()),
-                    depth,
-                    node_name: node.node_name,
-                }),
-                RuleKind::Recursion(alias) => parse_tree.nodes.push(ParseNode {
-                    kind: ParseNodeKind::NonTerminal(alias.clone()),
-                    depth,
-                    node_name: node.node_name,
-                }),
-                _ => Grammar::branch(node, &mut queue, depth),
+                node
             }
-        }
+            RuleKind::Recursion(alias) => {
+                let node = Rc::new(RefCell::new(ParseNode {
+                    kind: ParseNodeKind::NonTerminal(alias),
+                    node_name: rule.node_name,
+                    children: Vec::new(),
+                }));
 
-        parse_tree
-    }
+                parent.as_ref().borrow_mut().children.push(node.clone());
 
-    fn branch(mut node: Rule, queue: &mut VecDeque<(Rule, usize)>, depth: usize) {
-        match &mut node.kind {
-            RuleKind::Choice(choices) => {
-                for choice in choices {
-                    queue.push_back((choice.clone(), depth));
-                }
+                node
             }
-            RuleKind::Sequence(entries) => {
+            RuleKind::Sequence(mut entries) => {
                 if entries.len() > 0 {
-                    queue.push_back((entries.front().unwrap().clone(), depth));
+                    let node = Grammar::traverse_rule(entries.front().unwrap().clone(), parent);
 
-                    queue.push_back((
+                    let node = Grammar::traverse_rule(
                         Rule {
                             kind: RuleKind::Sequence(entries.split_off(1)),
-                            node_name: node.node_name,
+                            node_name: rule.node_name,
                         },
-                        depth + 1,
-                    ));
+                        node,
+                    );
+
+                    node
+                } else {
+                    parent
                 }
             }
-            _ => {}
+            RuleKind::Choice(choices) => {
+                for choice in choices {
+                    Grammar::traverse_rule(choice, parent.clone());
+                }
+
+                parent
+            }
+            _ => unreachable!(),
         }
     }
 }

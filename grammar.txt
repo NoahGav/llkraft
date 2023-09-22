@@ -1,46 +1,65 @@
 ParseTree {
-    nodes: [
-        ParseNode {
-            kind: Terminal(
-                "EOF",
-            ),
-            depth: 0,
+    root: RefCell {
+        value: ParseNode {
+            kind: Root,
             node_name: "program",
+            children: [
+                RefCell {
+                    value: ParseNode {
+                        kind: Terminal(
+                            "EXPORT",
+                        ),
+                        node_name: "program",
+                        children: [
+                            RefCell {
+                                value: ParseNode {
+                                    kind: Terminal(
+                                        "FN",
+                                    ),
+                                    node_name: "fn",
+                                    children: [],
+                                },
+                            },
+                            RefCell {
+                                value: ParseNode {
+                                    kind: Terminal(
+                                        "STRUCT",
+                                    ),
+                                    node_name: "struct",
+                                    children: [],
+                                },
+                            },
+                        ],
+                    },
+                },
+                RefCell {
+                    value: ParseNode {
+                        kind: Terminal(
+                            "FN",
+                        ),
+                        node_name: "fn",
+                        children: [],
+                    },
+                },
+                RefCell {
+                    value: ParseNode {
+                        kind: Terminal(
+                            "STRUCT",
+                        ),
+                        node_name: "struct",
+                        children: [],
+                    },
+                },
+                RefCell {
+                    value: ParseNode {
+                        kind: Terminal(
+                            "EOF",
+                        ),
+                        node_name: "program",
+                        children: [],
+                    },
+                },
+            ],
         },
-        ParseNode {
-            kind: Terminal(
-                "EXPORT",
-            ),
-            depth: 0,
-            node_name: "program",
-        },
-        ParseNode {
-            kind: Terminal(
-                "FN",
-            ),
-            depth: 0,
-            node_name: "fn",
-        },
-        ParseNode {
-            kind: Terminal(
-                "STRUCT",
-            ),
-            depth: 0,
-            node_name: "struct",
-        },
-        ParseNode {
-            kind: Terminal(
-                "FN",
-            ),
-            depth: 1,
-            node_name: "fn",
-        },
-        ParseNode {
-            kind: Terminal(
-                "STRUCT",
-            ),
-            depth: 1,
-            node_name: "struct",
-        },
-    ],
+    },
 }
