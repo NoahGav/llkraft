@@ -2,61 +2,82 @@ ParseTree {
     root: RefCell {
         value: ParseNode {
             kind: Root,
-            node_name: "program",
+            node_name: "expr",
             children: [
                 RefCell {
                     value: ParseNode {
-                        kind: Terminal(
-                            "EXPORT",
-                        ),
-                        node_name: "program",
+                        kind: Branch,
+                        node_name: "expr",
                         children: [
                             RefCell {
                                 value: ParseNode {
                                     kind: Terminal(
-                                        "FN",
+                                        "MINS",
                                     ),
-                                    node_name: "fn",
-                                    children: [],
+                                    node_name: "expr",
+                                    children: [
+                                        RefCell {
+                                            value: ParseNode {
+                                                kind: Terminal(
+                                                    "IDENT",
+                                                ),
+                                                node_name: "expr",
+                                                children: [
+                                                    RefCell {
+                                                        value: ParseNode {
+                                                            kind: Terminal(
+                                                                "PLUS",
+                                                            ),
+                                                            node_name: "expr",
+                                                            children: [
+                                                                RefCell {
+                                                                    value: ParseNode {
+                                                                        kind: NonTerminal(
+                                                                            "expr",
+                                                                        ),
+                                                                        node_name: "expr",
+                                                                        children: [],
+                                                                    },
+                                                                },
+                                                            ],
+                                                        },
+                                                    },
+                                                ],
+                                            },
+                                        },
+                                    ],
                                 },
                             },
                             RefCell {
                                 value: ParseNode {
                                     kind: Terminal(
-                                        "STRUCT",
+                                        "IDENT",
                                     ),
-                                    node_name: "struct",
-                                    children: [],
+                                    node_name: "expr",
+                                    children: [
+                                        RefCell {
+                                            value: ParseNode {
+                                                kind: Terminal(
+                                                    "PLUS",
+                                                ),
+                                                node_name: "expr",
+                                                children: [
+                                                    RefCell {
+                                                        value: ParseNode {
+                                                            kind: NonTerminal(
+                                                                "expr",
+                                                            ),
+                                                            node_name: "expr",
+                                                            children: [],
+                                                        },
+                                                    },
+                                                ],
+                                            },
+                                        },
+                                    ],
                                 },
                             },
                         ],
-                    },
-                },
-                RefCell {
-                    value: ParseNode {
-                        kind: Terminal(
-                            "FN",
-                        ),
-                        node_name: "fn",
-                        children: [],
-                    },
-                },
-                RefCell {
-                    value: ParseNode {
-                        kind: Terminal(
-                            "STRUCT",
-                        ),
-                        node_name: "struct",
-                        children: [],
-                    },
-                },
-                RefCell {
-                    value: ParseNode {
-                        kind: Terminal(
-                            "EOF",
-                        ),
-                        node_name: "program",
-                        children: [],
                     },
                 },
             ],

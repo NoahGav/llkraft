@@ -1,8 +1,23 @@
 use std::{
     cell::RefCell,
-    collections::{HashMap, LinkedList, VecDeque},
+    collections::{HashMap, LinkedList},
     rc::Rc,
 };
+
+macro_rules! linked_list {
+    () => {
+        LinkedList::new()
+    };
+    ($($item:expr),+ $(,)?) => {
+        {
+            let mut list = LinkedList::new();
+            $(
+                list.push_back($item);
+            )+
+            list
+        }
+    };
+}
 
 #[derive(Debug, Clone)]
 enum RuleKind {
@@ -38,17 +53,56 @@ impl Rule {
                     let mut simplified = LinkedList::new();
                     let mut is_simplified = true;
 
-                    for entry in entries {
-                        let (simplified_rule, rule_simplified) = entry.simplify(grammar);
-                        is_simplified &= rule_simplified;
+                    let mut entries_iter = entries.clone();
 
-                        // Check if the entry is a sequence and flatten it.
-                        if let RuleKind::Sequence(sub_entries) = simplified_rule.kind {
-                            simplified.extend(sub_entries);
-                            is_simplified = false;
-                        } else {
-                            simplified.push_back(simplified_rule);
+                    while entries_iter.len() > 0 {
+                        let entry = entries_iter.front().unwrap();
+
+                        match &entry.kind {
+                            //  If entry is a choice, then create a new choice and
+                            // wrap all the choices in a sequence where the rest of
+                            // sequence is entries_iter.split_off(1).
+                            RuleKind::Choice(choices) => {
+                                let mut new_choices = Vec::new();
+
+                                for choice in choices {
+                                    let mut sequence = linked_list!(choice.clone());
+
+                                    for entry in entries_iter.clone().split_off(1) {
+                                        sequence.push_back(entry);
+                                    }
+
+                                    new_choices.push(Rule {
+                                        kind: RuleKind::Sequence(sequence),
+                                        node_name: self.node_name.clone(),
+                                    });
+                                }
+
+                                return (
+                                    Rule {
+                                        kind: RuleKind::Choice(new_choices),
+                                        node_name: self.node_name.clone(),
+                                    },
+                                    false,
+                                );
+                            }
+
+                            // If it's not a choice then we just handle it like normal.
+                            _ => {
+                                let (simplified_rule, rule_simplified) = entry.simplify(grammar);
+                                is_simplified &= rule_simplified;
+
+                                // Check if the entry is a sequence and flatten it.
+                                if let RuleKind::Sequence(sub_entries) = simplified_rule.kind {
+                                    simplified.extend(sub_entries);
+                                    is_simplified = false;
+                                } else {
+                                    simplified.push_back(simplified_rule);
+                                }
+                            }
                         }
+
+                        entries_iter = entries_iter.split_off(1);
                     }
 
                     (
@@ -183,24 +237,10 @@ impl Grammar {
     }
 }
 
-macro_rules! linked_list {
-    () => {
-        LinkedList::new()
-    };
-    ($($item:expr),+ $(,)?) => {
-        {
-            let mut list = LinkedList::new();
-            $(
-                list.push_back($item);
-            )+
-            list
-        }
-    };
-}
-
 #[derive(Debug, Clone)]
 enum ParseNodeKind {
     Root,
+    Branch,
     Terminal(String),
     NonTerminal(String),
 }
@@ -275,10 +315,17 @@ impl Grammar {
                 }
             }
             RuleKind::Choice(choices) => {
+                let choice_parent = Rc::new(RefCell::new(ParseNode {
+                    kind: ParseNodeKind::Branch,
+                    node_name: rule.node_name.clone(),
+                    children: Vec::new(),
+                }));
+
                 for choice in choices {
-                    Grammar::traverse_rule(choice, parent.clone());
+                    Grammar::traverse_rule(choice, choice_parent.clone());
                 }
 
+                parent.as_ref().borrow_mut().children.push(choice_parent);
                 parent
             }
             _ => unreachable!(),
@@ -350,19 +397,24 @@ fn main() {
     }
 
     entry!(
-        "program",
-        choice!(
-            sequence!(terminal!("EXPORT"), alias!("decl")),
-            alias!("decl"),
-            terminal!("EOF")
+        "expr",
+        sequence!(
+            choice!(
+                sequence!(terminal!("MINS"), terminal!("IDENT")),
+                terminal!("IDENT")
+            ),
+            terminal!("PLUS"),
+            recursion!("expr")
         )
     );
 
-    rule!("decl", choice!(alias!("fn"), alias!("struct")));
-
-    rule!("fn", terminal!("FN"));
-
-    rule!("struct", terminal!("STRUCT"));
+    rule!(
+        "term",
+        choice!(
+            sequence!(terminal!("MINS"), terminal!("IDENT")),
+            terminal!("IDENT")
+        )
+    );
 
     grammar = grammar.simplify();
     std::fs::write("grammar.txt", format!("{:#?}", grammar.traverse())).unwrap();
