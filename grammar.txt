@@ -3,201 +3,6 @@ Grammar {
         "program",
     ),
     rules: {
-        "struct_fields": Rule {
-            kind: Choice(
-                [
-                    Rule {
-                        kind: Sequence(
-                            [
-                                Rule {
-                                    kind: Terminal(
-                                        "IDENT",
-                                    ),
-                                    node_name: "struct_field",
-                                },
-                                Rule {
-                                    kind: Terminal(
-                                        "COLON",
-                                    ),
-                                    node_name: "struct_field",
-                                },
-                                Rule {
-                                    kind: Choice(
-                                        [
-                                            Rule {
-                                                kind: Sequence(
-                                                    [
-                                                        Rule {
-                                                            kind: Terminal(
-                                                                "IDENT",
-                                                            ),
-                                                            node_name: "field_type",
-                                                        },
-                                                        Rule {
-                                                            kind: Terminal(
-                                                                "SEMICOLON",
-                                                            ),
-                                                            node_name: "struct_field",
-                                                        },
-                                                    ],
-                                                ),
-                                                node_name: "struct_field",
-                                            },
-                                            Rule {
-                                                kind: Sequence(
-                                                    [
-                                                        Rule {
-                                                            kind: Terminal(
-                                                                "VEC",
-                                                            ),
-                                                            node_name: "field_type",
-                                                        },
-                                                        Rule {
-                                                            kind: Terminal(
-                                                                "LT",
-                                                            ),
-                                                            node_name: "field_type",
-                                                        },
-                                                        Rule {
-                                                            kind: Terminal(
-                                                                "IDENT",
-                                                            ),
-                                                            node_name: "field_type",
-                                                        },
-                                                        Rule {
-                                                            kind: Terminal(
-                                                                "GT",
-                                                            ),
-                                                            node_name: "field_type",
-                                                        },
-                                                        Rule {
-                                                            kind: Terminal(
-                                                                "SEMICOLON",
-                                                            ),
-                                                            node_name: "struct_field",
-                                                        },
-                                                    ],
-                                                ),
-                                                node_name: "struct_field",
-                                            },
-                                        ],
-                                    ),
-                                    node_name: "struct_field",
-                                },
-                            ],
-                        ),
-                        node_name: "struct_field",
-                    },
-                    Rule {
-                        kind: Sequence(
-                            [
-                                Rule {
-                                    kind: Terminal(
-                                        "IDENT",
-                                    ),
-                                    node_name: "struct_field",
-                                },
-                                Rule {
-                                    kind: Terminal(
-                                        "COLON",
-                                    ),
-                                    node_name: "struct_field",
-                                },
-                                Rule {
-                                    kind: Choice(
-                                        [
-                                            Rule {
-                                                kind: Sequence(
-                                                    [
-                                                        Rule {
-                                                            kind: Terminal(
-                                                                "IDENT",
-                                                            ),
-                                                            node_name: "field_type",
-                                                        },
-                                                        Rule {
-                                                            kind: Terminal(
-                                                                "SEMICOLON",
-                                                            ),
-                                                            node_name: "struct_field",
-                                                        },
-                                                        Rule {
-                                                            kind: Terminal(
-                                                                "COMMA",
-                                                            ),
-                                                            node_name: "struct_fields",
-                                                        },
-                                                        Rule {
-                                                            kind: Recursion(
-                                                                "struct_fields",
-                                                            ),
-                                                            node_name: "struct_fields",
-                                                        },
-                                                    ],
-                                                ),
-                                                node_name: "struct_fields",
-                                            },
-                                            Rule {
-                                                kind: Sequence(
-                                                    [
-                                                        Rule {
-                                                            kind: Terminal(
-                                                                "VEC",
-                                                            ),
-                                                            node_name: "field_type",
-                                                        },
-                                                        Rule {
-                                                            kind: Terminal(
-                                                                "LT",
-                                                            ),
-                                                            node_name: "field_type",
-                                                        },
-                                                        Rule {
-                                                            kind: Terminal(
-                                                                "IDENT",
-                                                            ),
-                                                            node_name: "field_type",
-                                                        },
-                                                        Rule {
-                                                            kind: Terminal(
-                                                                "GT",
-                                                            ),
-                                                            node_name: "field_type",
-                                                        },
-                                                        Rule {
-                                                            kind: Terminal(
-                                                                "SEMICOLON",
-                                                            ),
-                                                            node_name: "struct_field",
-                                                        },
-                                                        Rule {
-                                                            kind: Terminal(
-                                                                "COMMA",
-                                                            ),
-                                                            node_name: "struct_fields",
-                                                        },
-                                                        Rule {
-                                                            kind: Recursion(
-                                                                "struct_fields",
-                                                            ),
-                                                            node_name: "struct_fields",
-                                                        },
-                                                    ],
-                                                ),
-                                                node_name: "struct_fields",
-                                            },
-                                        ],
-                                    ),
-                                    node_name: "struct_fields",
-                                },
-                            ],
-                        ),
-                        node_name: "struct_fields",
-                    },
-                ],
-            ),
-            node_name: "struct_fields",
-        },
         "program": Rule {
             kind: Choice(
                 [
@@ -291,12 +96,6 @@ Grammar {
                                                                                 },
                                                                                 Rule {
                                                                                     kind: Terminal(
-                                                                                        "SEMICOLON",
-                                                                                    ),
-                                                                                    node_name: "struct_field",
-                                                                                },
-                                                                                Rule {
-                                                                                    kind: Terminal(
                                                                                         "RBRACE",
                                                                                     ),
                                                                                     node_name: "struct_declaration",
@@ -331,12 +130,6 @@ Grammar {
                                                                                         "GT",
                                                                                     ),
                                                                                     node_name: "field_type",
-                                                                                },
-                                                                                Rule {
-                                                                                    kind: Terminal(
-                                                                                        "SEMICOLON",
-                                                                                    ),
-                                                                                    node_name: "struct_field",
                                                                                 },
                                                                                 Rule {
                                                                                     kind: Terminal(
@@ -385,12 +178,6 @@ Grammar {
                                                                                 },
                                                                                 Rule {
                                                                                     kind: Terminal(
-                                                                                        "SEMICOLON",
-                                                                                    ),
-                                                                                    node_name: "struct_field",
-                                                                                },
-                                                                                Rule {
-                                                                                    kind: Terminal(
                                                                                         "COMMA",
                                                                                     ),
                                                                                     node_name: "struct_fields",
@@ -440,12 +227,6 @@ Grammar {
                                                                                 },
                                                                                 Rule {
                                                                                     kind: Terminal(
-                                                                                        "SEMICOLON",
-                                                                                    ),
-                                                                                    node_name: "struct_field",
-                                                                                },
-                                                                                Rule {
-                                                                                    kind: Terminal(
                                                                                         "COMMA",
                                                                                     ),
                                                                                     node_name: "struct_fields",
@@ -491,6 +272,170 @@ Grammar {
                 ],
             ),
             node_name: "program",
+        },
+        "struct_fields": Rule {
+            kind: Choice(
+                [
+                    Rule {
+                        kind: Sequence(
+                            [
+                                Rule {
+                                    kind: Terminal(
+                                        "IDENT",
+                                    ),
+                                    node_name: "struct_field",
+                                },
+                                Rule {
+                                    kind: Terminal(
+                                        "COLON",
+                                    ),
+                                    node_name: "struct_field",
+                                },
+                                Rule {
+                                    kind: Choice(
+                                        [
+                                            Rule {
+                                                kind: Terminal(
+                                                    "IDENT",
+                                                ),
+                                                node_name: "field_type",
+                                            },
+                                            Rule {
+                                                kind: Sequence(
+                                                    [
+                                                        Rule {
+                                                            kind: Terminal(
+                                                                "VEC",
+                                                            ),
+                                                            node_name: "field_type",
+                                                        },
+                                                        Rule {
+                                                            kind: Terminal(
+                                                                "LT",
+                                                            ),
+                                                            node_name: "field_type",
+                                                        },
+                                                        Rule {
+                                                            kind: Terminal(
+                                                                "IDENT",
+                                                            ),
+                                                            node_name: "field_type",
+                                                        },
+                                                        Rule {
+                                                            kind: Terminal(
+                                                                "GT",
+                                                            ),
+                                                            node_name: "field_type",
+                                                        },
+                                                    ],
+                                                ),
+                                                node_name: "field_type",
+                                            },
+                                        ],
+                                    ),
+                                    node_name: "field_type",
+                                },
+                            ],
+                        ),
+                        node_name: "struct_field",
+                    },
+                    Rule {
+                        kind: Sequence(
+                            [
+                                Rule {
+                                    kind: Terminal(
+                                        "IDENT",
+                                    ),
+                                    node_name: "struct_field",
+                                },
+                                Rule {
+                                    kind: Terminal(
+                                        "COLON",
+                                    ),
+                                    node_name: "struct_field",
+                                },
+                                Rule {
+                                    kind: Choice(
+                                        [
+                                            Rule {
+                                                kind: Sequence(
+                                                    [
+                                                        Rule {
+                                                            kind: Terminal(
+                                                                "IDENT",
+                                                            ),
+                                                            node_name: "field_type",
+                                                        },
+                                                        Rule {
+                                                            kind: Terminal(
+                                                                "COMMA",
+                                                            ),
+                                                            node_name: "struct_fields",
+                                                        },
+                                                        Rule {
+                                                            kind: Recursion(
+                                                                "struct_fields",
+                                                            ),
+                                                            node_name: "struct_fields",
+                                                        },
+                                                    ],
+                                                ),
+                                                node_name: "struct_fields",
+                                            },
+                                            Rule {
+                                                kind: Sequence(
+                                                    [
+                                                        Rule {
+                                                            kind: Terminal(
+                                                                "VEC",
+                                                            ),
+                                                            node_name: "field_type",
+                                                        },
+                                                        Rule {
+                                                            kind: Terminal(
+                                                                "LT",
+                                                            ),
+                                                            node_name: "field_type",
+                                                        },
+                                                        Rule {
+                                                            kind: Terminal(
+                                                                "IDENT",
+                                                            ),
+                                                            node_name: "field_type",
+                                                        },
+                                                        Rule {
+                                                            kind: Terminal(
+                                                                "GT",
+                                                            ),
+                                                            node_name: "field_type",
+                                                        },
+                                                        Rule {
+                                                            kind: Terminal(
+                                                                "COMMA",
+                                                            ),
+                                                            node_name: "struct_fields",
+                                                        },
+                                                        Rule {
+                                                            kind: Recursion(
+                                                                "struct_fields",
+                                                            ),
+                                                            node_name: "struct_fields",
+                                                        },
+                                                    ],
+                                                ),
+                                                node_name: "struct_fields",
+                                            },
+                                        ],
+                                    ),
+                                    node_name: "struct_fields",
+                                },
+                            ],
+                        ),
+                        node_name: "struct_fields",
+                    },
+                ],
+            ),
+            node_name: "struct_fields",
         },
     },
 }

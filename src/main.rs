@@ -289,19 +289,22 @@ struct ParseTree {
 }
 
 impl Grammar {
-    fn traverse(&self) -> ParseTree {
-        let entry_name = self.entry.clone().unwrap();
-        let entry = self.rules.get(&entry_name).unwrap().clone();
+    fn traverse(&self) -> HashMap<String, ParseTree> {
+        let mut parse_trees = HashMap::new();
 
-        let root = Rc::new(RefCell::new(ParseNode {
-            kind: ParseNodeKind::Root,
-            node_name: entry_name,
-            children: Vec::new(),
-        }));
+        for (name, rule) in &self.rules {
+            let root = Rc::new(RefCell::new(ParseNode {
+                kind: ParseNodeKind::Root,
+                node_name: name.clone(),
+                children: Vec::new(),
+            }));
 
-        Grammar::traverse_rule(entry, root.clone());
+            Grammar::traverse_rule(rule.clone(), root.clone());
 
-        ParseTree { root }
+            parse_trees.insert(name.clone(), ParseTree { root });
+        }
+
+        parse_trees
     }
 
     fn traverse_rule(rule: Rule, parent: Rc<RefCell<ParseNode>>) -> Rc<RefCell<ParseNode>> {
@@ -472,12 +475,7 @@ fn main() {
 
     rule!(
         "struct_field",
-        sequence!(
-            terminal!("IDENT"),
-            terminal!("COLON"),
-            alias!("field_type"),
-            terminal!("SEMICOLON")
-        )
+        sequence!(terminal!("IDENT"), terminal!("COLON"), alias!("field_type"))
     );
 
     rule!(
