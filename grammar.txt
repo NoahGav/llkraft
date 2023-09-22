@@ -39,13 +39,6 @@ Grammar {
                                     ),
                                     node_name: "fn_declaration",
                                 },
-                            ],
-                        ),
-                        node_name: "fn_declaration",
-                    },
-                    Rule {
-                        kind: Sequence(
-                            [
                                 Rule {
                                     kind: Terminal(
                                         "STRUCT",
@@ -100,9 +93,15 @@ Grammar {
                                                                                     ),
                                                                                     node_name: "struct_declaration",
                                                                                 },
+                                                                                Rule {
+                                                                                    kind: Terminal(
+                                                                                        "EOF",
+                                                                                    ),
+                                                                                    node_name: "program",
+                                                                                },
                                                                             ],
                                                                         ),
-                                                                        node_name: "struct_declaration",
+                                                                        node_name: "program",
                                                                     },
                                                                     Rule {
                                                                         kind: Sequence(
@@ -137,17 +136,23 @@ Grammar {
                                                                                     ),
                                                                                     node_name: "struct_declaration",
                                                                                 },
+                                                                                Rule {
+                                                                                    kind: Terminal(
+                                                                                        "EOF",
+                                                                                    ),
+                                                                                    node_name: "program",
+                                                                                },
                                                                             ],
                                                                         ),
-                                                                        node_name: "struct_declaration",
+                                                                        node_name: "program",
                                                                     },
                                                                 ],
                                                             ),
-                                                            node_name: "struct_declaration",
+                                                            node_name: "program",
                                                         },
                                                     ],
                                                 ),
-                                                node_name: "struct_declaration",
+                                                node_name: "program",
                                             },
                                             Rule {
                                                 kind: Sequence(
@@ -194,9 +199,15 @@ Grammar {
                                                                                     ),
                                                                                     node_name: "struct_declaration",
                                                                                 },
+                                                                                Rule {
+                                                                                    kind: Terminal(
+                                                                                        "EOF",
+                                                                                    ),
+                                                                                    node_name: "program",
+                                                                                },
                                                                             ],
                                                                         ),
-                                                                        node_name: "struct_declaration",
+                                                                        node_name: "program",
                                                                     },
                                                                     Rule {
                                                                         kind: Sequence(
@@ -243,25 +254,31 @@ Grammar {
                                                                                     ),
                                                                                     node_name: "struct_declaration",
                                                                                 },
+                                                                                Rule {
+                                                                                    kind: Terminal(
+                                                                                        "EOF",
+                                                                                    ),
+                                                                                    node_name: "program",
+                                                                                },
                                                                             ],
                                                                         ),
-                                                                        node_name: "struct_declaration",
+                                                                        node_name: "program",
                                                                     },
                                                                 ],
                                                             ),
-                                                            node_name: "struct_declaration",
+                                                            node_name: "program",
                                                         },
                                                     ],
                                                 ),
-                                                node_name: "struct_declaration",
+                                                node_name: "program",
                                             },
                                         ],
                                     ),
-                                    node_name: "struct_declaration",
+                                    node_name: "program",
                                 },
                             ],
                         ),
-                        node_name: "struct_declaration",
+                        node_name: "program",
                     },
                     Rule {
                         kind: Terminal(

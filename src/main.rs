@@ -433,8 +433,11 @@ fn main() {
     entry!(
         "program",
         choice!(
-            alias!("fn_declaration"),
-            alias!("struct_declaration"),
+            sequence!(
+                alias!("fn_declaration"),
+                alias!("struct_declaration"),
+                terminal!("EOF")
+            ),
             terminal!("EOF")
         )
     );
