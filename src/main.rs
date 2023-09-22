@@ -54,6 +54,7 @@ impl Rule {
                     let mut is_simplified = true;
 
                     let mut entries_iter = entries.clone();
+                    let mut n = 0;
 
                     while entries_iter.len() > 0 {
                         let entry = entries_iter.front().unwrap();
@@ -66,7 +67,21 @@ impl Rule {
                                 let mut new_choices = Vec::new();
 
                                 for choice in choices {
-                                    let mut sequence = linked_list!(choice.clone());
+                                    let mut sequence = LinkedList::new();
+
+                                    let mut i = 0;
+
+                                    for entry in entries {
+                                        if i >= n {
+                                            break;
+                                        }
+
+                                        sequence.push_back(entry.clone());
+
+                                        i += 1;
+                                    }
+
+                                    sequence.push_back(choice.clone());
 
                                     for entry in entries_iter.clone().split_off(1) {
                                         sequence.push_back(entry);
@@ -103,6 +118,7 @@ impl Rule {
                         }
 
                         entries_iter = entries_iter.split_off(1);
+                        n += 1;
                     }
 
                     (
@@ -399,11 +415,8 @@ fn main() {
     entry!(
         "expr",
         sequence!(
-            choice!(
-                sequence!(terminal!("MINS"), terminal!("IDENT")),
-                terminal!("IDENT")
-            ),
-            terminal!("PLUS"),
+            alias!("term"),
+            choice!(terminal!("PLUS"), terminal!("MINUS")),
             recursion!("expr")
         )
     );
@@ -411,11 +424,13 @@ fn main() {
     rule!(
         "term",
         choice!(
-            sequence!(terminal!("MINS"), terminal!("IDENT")),
+            sequence!(terminal!("MINUS"), terminal!("IDENT")),
             terminal!("IDENT")
         )
     );
 
     grammar = grammar.simplify();
-    std::fs::write("grammar.txt", format!("{:#?}", grammar.traverse())).unwrap();
+
+    std::fs::write("grammar.txt", format!("{:#?}", grammar)).unwrap();
+    std::fs::write("parser.txt", format!("{:#?}", grammar.traverse())).unwrap();
 }
