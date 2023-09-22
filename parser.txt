@@ -2,78 +2,51 @@ ParseTree {
     root: RefCell {
         value: ParseNode {
             kind: Root,
-            node_name: "expr",
+            node_name: "program",
             children: [
                 RefCell {
                     value: ParseNode {
                         kind: Branch,
-                        node_name: "expr",
+                        node_name: "program",
                         children: [
                             RefCell {
                                 value: ParseNode {
-                                    kind: Branch,
-                                    node_name: "expr",
+                                    kind: Terminal(
+                                        "FN",
+                                    ),
+                                    node_name: "fn_declaration",
                                     children: [
-                                        RefCell {
-                                            value: ParseNode {
-                                                kind: Terminal(
-                                                    "MINUS",
-                                                ),
-                                                node_name: "term",
-                                                children: [
-                                                    RefCell {
-                                                        value: ParseNode {
-                                                            kind: Terminal(
-                                                                "IDENT",
-                                                            ),
-                                                            node_name: "term",
-                                                            children: [
-                                                                RefCell {
-                                                                    value: ParseNode {
-                                                                        kind: Terminal(
-                                                                            "PLUS",
-                                                                        ),
-                                                                        node_name: "expr",
-                                                                        children: [
-                                                                            RefCell {
-                                                                                value: ParseNode {
-                                                                                    kind: NonTerminal(
-                                                                                        "expr",
-                                                                                    ),
-                                                                                    node_name: "expr",
-                                                                                    children: [],
-                                                                                },
-                                                                            },
-                                                                        ],
-                                                                    },
-                                                                },
-                                                            ],
-                                                        },
-                                                    },
-                                                ],
-                                            },
-                                        },
                                         RefCell {
                                             value: ParseNode {
                                                 kind: Terminal(
                                                     "IDENT",
                                                 ),
-                                                node_name: "term",
+                                                node_name: "fn_declaration",
                                                 children: [
                                                     RefCell {
                                                         value: ParseNode {
                                                             kind: Terminal(
-                                                                "PLUS",
+                                                                "LPAREN",
                                                             ),
-                                                            node_name: "expr",
+                                                            node_name: "fn_declaration",
                                                             children: [
                                                                 RefCell {
                                                                     value: ParseNode {
-                                                                        kind: NonTerminal(
-                                                                            "expr",
+                                                                        kind: Terminal(
+                                                                            "RPAREN",
                                                                         ),
-                                                                        node_name: "expr",
-                                                                        children: [],
+                                                                        node_name: "fn_declaration",
+                                                                        children: [
+                                                                            RefCell {
+                                                                                value: ParseNode {
+                                                                                    kind: Terminal(
+                                                                                        "SEMICOLON",
+                                                                                    ),
+                                                                                    node_name: "fn_declaration",
+                                                                                    children: [],
+                                                                                },
+                                                                            },
+                                                                        ],
                                                                     },
                                                                 },
                                                             ],
@@ -87,37 +60,300 @@ ParseTree {
                             },
                             RefCell {
                                 value: ParseNode {
-                                    kind: Branch,
-                                    node_name: "expr",
+                                    kind: Terminal(
+                                        "STRUCT",
+                                    ),
+                                    node_name: "struct_declaration",
                                     children: [
                                         RefCell {
                                             value: ParseNode {
                                                 kind: Terminal(
-                                                    "MINUS",
+                                                    "IDENT",
                                                 ),
-                                                node_name: "term",
+                                                node_name: "struct_declaration",
                                                 children: [
                                                     RefCell {
                                                         value: ParseNode {
                                                             kind: Terminal(
-                                                                "IDENT",
+                                                                "LBRACE",
                                                             ),
-                                                            node_name: "term",
+                                                            node_name: "struct_declaration",
                                                             children: [
                                                                 RefCell {
                                                                     value: ParseNode {
-                                                                        kind: Terminal(
-                                                                            "MINUS",
-                                                                        ),
-                                                                        node_name: "expr",
+                                                                        kind: Branch,
+                                                                        node_name: "struct_declaration",
                                                                         children: [
                                                                             RefCell {
                                                                                 value: ParseNode {
-                                                                                    kind: NonTerminal(
-                                                                                        "expr",
+                                                                                    kind: Terminal(
+                                                                                        "IDENT",
                                                                                     ),
-                                                                                    node_name: "expr",
-                                                                                    children: [],
+                                                                                    node_name: "struct_field",
+                                                                                    children: [
+                                                                                        RefCell {
+                                                                                            value: ParseNode {
+                                                                                                kind: Terminal(
+                                                                                                    "COLON",
+                                                                                                ),
+                                                                                                node_name: "struct_field",
+                                                                                                children: [
+                                                                                                    RefCell {
+                                                                                                        value: ParseNode {
+                                                                                                            kind: Branch,
+                                                                                                            node_name: "struct_declaration",
+                                                                                                            children: [
+                                                                                                                RefCell {
+                                                                                                                    value: ParseNode {
+                                                                                                                        kind: Terminal(
+                                                                                                                            "IDENT",
+                                                                                                                        ),
+                                                                                                                        node_name: "field_type",
+                                                                                                                        children: [
+                                                                                                                            RefCell {
+                                                                                                                                value: ParseNode {
+                                                                                                                                    kind: Terminal(
+                                                                                                                                        "SEMICOLON",
+                                                                                                                                    ),
+                                                                                                                                    node_name: "struct_field",
+                                                                                                                                    children: [
+                                                                                                                                        RefCell {
+                                                                                                                                            value: ParseNode {
+                                                                                                                                                kind: Terminal(
+                                                                                                                                                    "RBRACE",
+                                                                                                                                                ),
+                                                                                                                                                node_name: "struct_declaration",
+                                                                                                                                                children: [],
+                                                                                                                                            },
+                                                                                                                                        },
+                                                                                                                                    ],
+                                                                                                                                },
+                                                                                                                            },
+                                                                                                                        ],
+                                                                                                                    },
+                                                                                                                },
+                                                                                                                RefCell {
+                                                                                                                    value: ParseNode {
+                                                                                                                        kind: Terminal(
+                                                                                                                            "VEC",
+                                                                                                                        ),
+                                                                                                                        node_name: "field_type",
+                                                                                                                        children: [
+                                                                                                                            RefCell {
+                                                                                                                                value: ParseNode {
+                                                                                                                                    kind: Terminal(
+                                                                                                                                        "LT",
+                                                                                                                                    ),
+                                                                                                                                    node_name: "field_type",
+                                                                                                                                    children: [
+                                                                                                                                        RefCell {
+                                                                                                                                            value: ParseNode {
+                                                                                                                                                kind: Terminal(
+                                                                                                                                                    "IDENT",
+                                                                                                                                                ),
+                                                                                                                                                node_name: "field_type",
+                                                                                                                                                children: [
+                                                                                                                                                    RefCell {
+                                                                                                                                                        value: ParseNode {
+                                                                                                                                                            kind: Terminal(
+                                                                                                                                                                "GT",
+                                                                                                                                                            ),
+                                                                                                                                                            node_name: "field_type",
+                                                                                                                                                            children: [
+                                                                                                                                                                RefCell {
+                                                                                                                                                                    value: ParseNode {
+                                                                                                                                                                        kind: Terminal(
+                                                                                                                                                                            "SEMICOLON",
+                                                                                                                                                                        ),
+                                                                                                                                                                        node_name: "struct_field",
+                                                                                                                                                                        children: [
+                                                                                                                                                                            RefCell {
+                                                                                                                                                                                value: ParseNode {
+                                                                                                                                                                                    kind: Terminal(
+                                                                                                                                                                                        "RBRACE",
+                                                                                                                                                                                    ),
+                                                                                                                                                                                    node_name: "struct_declaration",
+                                                                                                                                                                                    children: [],
+                                                                                                                                                                                },
+                                                                                                                                                                            },
+                                                                                                                                                                        ],
+                                                                                                                                                                    },
+                                                                                                                                                                },
+                                                                                                                                                            ],
+                                                                                                                                                        },
+                                                                                                                                                    },
+                                                                                                                                                ],
+                                                                                                                                            },
+                                                                                                                                        },
+                                                                                                                                    ],
+                                                                                                                                },
+                                                                                                                            },
+                                                                                                                        ],
+                                                                                                                    },
+                                                                                                                },
+                                                                                                            ],
+                                                                                                        },
+                                                                                                    },
+                                                                                                ],
+                                                                                            },
+                                                                                        },
+                                                                                    ],
+                                                                                },
+                                                                            },
+                                                                            RefCell {
+                                                                                value: ParseNode {
+                                                                                    kind: Terminal(
+                                                                                        "IDENT",
+                                                                                    ),
+                                                                                    node_name: "struct_field",
+                                                                                    children: [
+                                                                                        RefCell {
+                                                                                            value: ParseNode {
+                                                                                                kind: Terminal(
+                                                                                                    "COLON",
+                                                                                                ),
+                                                                                                node_name: "struct_field",
+                                                                                                children: [
+                                                                                                    RefCell {
+                                                                                                        value: ParseNode {
+                                                                                                            kind: Branch,
+                                                                                                            node_name: "struct_declaration",
+                                                                                                            children: [
+                                                                                                                RefCell {
+                                                                                                                    value: ParseNode {
+                                                                                                                        kind: Terminal(
+                                                                                                                            "IDENT",
+                                                                                                                        ),
+                                                                                                                        node_name: "field_type",
+                                                                                                                        children: [
+                                                                                                                            RefCell {
+                                                                                                                                value: ParseNode {
+                                                                                                                                    kind: Terminal(
+                                                                                                                                        "SEMICOLON",
+                                                                                                                                    ),
+                                                                                                                                    node_name: "struct_field",
+                                                                                                                                    children: [
+                                                                                                                                        RefCell {
+                                                                                                                                            value: ParseNode {
+                                                                                                                                                kind: Terminal(
+                                                                                                                                                    "COMMA",
+                                                                                                                                                ),
+                                                                                                                                                node_name: "struct_fields",
+                                                                                                                                                children: [
+                                                                                                                                                    RefCell {
+                                                                                                                                                        value: ParseNode {
+                                                                                                                                                            kind: NonTerminal(
+                                                                                                                                                                "struct_fields",
+                                                                                                                                                            ),
+                                                                                                                                                            node_name: "struct_fields",
+                                                                                                                                                            children: [
+                                                                                                                                                                RefCell {
+                                                                                                                                                                    value: ParseNode {
+                                                                                                                                                                        kind: Terminal(
+                                                                                                                                                                            "RBRACE",
+                                                                                                                                                                        ),
+                                                                                                                                                                        node_name: "struct_declaration",
+                                                                                                                                                                        children: [],
+                                                                                                                                                                    },
+                                                                                                                                                                },
+                                                                                                                                                            ],
+                                                                                                                                                        },
+                                                                                                                                                    },
+                                                                                                                                                ],
+                                                                                                                                            },
+                                                                                                                                        },
+                                                                                                                                    ],
+                                                                                                                                },
+                                                                                                                            },
+                                                                                                                        ],
+                                                                                                                    },
+                                                                                                                },
+                                                                                                                RefCell {
+                                                                                                                    value: ParseNode {
+                                                                                                                        kind: Terminal(
+                                                                                                                            "VEC",
+                                                                                                                        ),
+                                                                                                                        node_name: "field_type",
+                                                                                                                        children: [
+                                                                                                                            RefCell {
+                                                                                                                                value: ParseNode {
+                                                                                                                                    kind: Terminal(
+                                                                                                                                        "LT",
+                                                                                                                                    ),
+                                                                                                                                    node_name: "field_type",
+                                                                                                                                    children: [
+                                                                                                                                        RefCell {
+                                                                                                                                            value: ParseNode {
+                                                                                                                                                kind: Terminal(
+                                                                                                                                                    "IDENT",
+                                                                                                                                                ),
+                                                                                                                                                node_name: "field_type",
+                                                                                                                                                children: [
+                                                                                                                                                    RefCell {
+                                                                                                                                                        value: ParseNode {
+                                                                                                                                                            kind: Terminal(
+                                                                                                                                                                "GT",
+                                                                                                                                                            ),
+                                                                                                                                                            node_name: "field_type",
+                                                                                                                                                            children: [
+                                                                                                                                                                RefCell {
+                                                                                                                                                                    value: ParseNode {
+                                                                                                                                                                        kind: Terminal(
+                                                                                                                                                                            "SEMICOLON",
+                                                                                                                                                                        ),
+                                                                                                                                                                        node_name: "struct_field",
+                                                                                                                                                                        children: [
+                                                                                                                                                                            RefCell {
+                                                                                                                                                                                value: ParseNode {
+                                                                                                                                                                                    kind: Terminal(
+                                                                                                                                                                                        "COMMA",
+                                                                                                                                                                                    ),
+                                                                                                                                                                                    node_name: "struct_fields",
+                                                                                                                                                                                    children: [
+                                                                                                                                                                                        RefCell {
+                                                                                                                                                                                            value: ParseNode {
+                                                                                                                                                                                                kind: NonTerminal(
+                                                                                                                                                                                                    "struct_fields",
+                                                                                                                                                                                                ),
+                                                                                                                                                                                                node_name: "struct_fields",
+                                                                                                                                                                                                children: [
+                                                                                                                                                                                                    RefCell {
+                                                                                                                                                                                                        value: ParseNode {
+                                                                                                                                                                                                            kind: Terminal(
+                                                                                                                                                                                                                "RBRACE",
+                                                                                                                                                                                                            ),
+                                                                                                                                                                                                            node_name: "struct_declaration",
+                                                                                                                                                                                                            children: [],
+                                                                                                                                                                                                        },
+                                                                                                                                                                                                    },
+                                                                                                                                                                                                ],
+                                                                                                                                                                                            },
+                                                                                                                                                                                        },
+                                                                                                                                                                                    ],
+                                                                                                                                                                                },
+                                                                                                                                                                            },
+                                                                                                                                                                        ],
+                                                                                                                                                                    },
+                                                                                                                                                                },
+                                                                                                                                                            ],
+                                                                                                                                                        },
+                                                                                                                                                    },
+                                                                                                                                                ],
+                                                                                                                                            },
+                                                                                                                                        },
+                                                                                                                                    ],
+                                                                                                                                },
+                                                                                                                            },
+                                                                                                                        ],
+                                                                                                                    },
+                                                                                                                },
+                                                                                                            ],
+                                                                                                        },
+                                                                                                    },
+                                                                                                ],
+                                                                                            },
+                                                                                        },
+                                                                                    ],
                                                                                 },
                                                                             },
                                                                         ],
@@ -129,36 +365,16 @@ ParseTree {
                                                 ],
                                             },
                                         },
-                                        RefCell {
-                                            value: ParseNode {
-                                                kind: Terminal(
-                                                    "IDENT",
-                                                ),
-                                                node_name: "term",
-                                                children: [
-                                                    RefCell {
-                                                        value: ParseNode {
-                                                            kind: Terminal(
-                                                                "MINUS",
-                                                            ),
-                                                            node_name: "expr",
-                                                            children: [
-                                                                RefCell {
-                                                                    value: ParseNode {
-                                                                        kind: NonTerminal(
-                                                                            "expr",
-                                                                        ),
-                                                                        node_name: "expr",
-                                                                        children: [],
-                                                                    },
-                                                                },
-                                                            ],
-                                                        },
-                                                    },
-                                                ],
-                                            },
-                                        },
                                     ],
+                                },
+                            },
+                            RefCell {
+                                value: ParseNode {
+                                    kind: Terminal(
+                                        "EOF",
+                                    ),
+                                    node_name: "program",
+                                    children: [],
                                 },
                             },
                         ],

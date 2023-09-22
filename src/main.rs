@@ -60,15 +60,24 @@ impl Rule {
                         let entry = entries_iter.front().unwrap();
 
                         match &entry.kind {
-                            //  If entry is a choice, then create a new choice and
-                            // wrap all the choices in a sequence where the rest of
-                            // sequence is entries_iter.split_off(1).
                             RuleKind::Choice(choices) => {
-                                let mut new_choices = Vec::new();
+                                if entries_iter.len() > 1 {
+                                    let mut new_choices = Vec::new();
 
-                                for choice in choices {
-                                    let mut sequence = LinkedList::new();
+                                    for choice in choices {
+                                        let mut sequence = linked_list!(choice.clone());
 
+                                        for entry in entries_iter.clone().split_off(1) {
+                                            sequence.push_back(entry);
+                                        }
+
+                                        new_choices.push(Rule {
+                                            kind: RuleKind::Sequence(sequence),
+                                            node_name: self.node_name.clone(),
+                                        });
+                                    }
+
+                                    let mut sequence = linked_list!();
                                     let mut i = 0;
 
                                     for entry in entries {
@@ -81,25 +90,31 @@ impl Rule {
                                         i += 1;
                                     }
 
-                                    sequence.push_back(choice.clone());
-
-                                    for entry in entries_iter.clone().split_off(1) {
-                                        sequence.push_back(entry);
-                                    }
-
-                                    new_choices.push(Rule {
-                                        kind: RuleKind::Sequence(sequence),
-                                        node_name: self.node_name.clone(),
-                                    });
-                                }
-
-                                return (
-                                    Rule {
+                                    sequence.push_back(Rule {
                                         kind: RuleKind::Choice(new_choices),
                                         node_name: self.node_name.clone(),
-                                    },
-                                    false,
-                                );
+                                    });
+
+                                    return (
+                                        Rule {
+                                            kind: RuleKind::Sequence(sequence),
+                                            node_name: self.node_name.clone(),
+                                        },
+                                        false,
+                                    );
+                                } else {
+                                    let (simplified_rule, rule_simplified) =
+                                        entry.simplify(grammar);
+                                    is_simplified &= rule_simplified;
+
+                                    // Check if the entry is a sequence and flatten it.
+                                    if let RuleKind::Sequence(sub_entries) = simplified_rule.kind {
+                                        simplified.extend(sub_entries);
+                                        is_simplified = false;
+                                    } else {
+                                        simplified.push_back(simplified_rule);
+                                    }
+                                }
                             }
 
                             // If it's not a choice then we just handle it like normal.
@@ -413,19 +428,68 @@ fn main() {
     }
 
     entry!(
-        "expr",
-        sequence!(
-            alias!("term"),
-            choice!(terminal!("PLUS"), terminal!("MINUS")),
-            recursion!("expr")
+        "program",
+        choice!(
+            alias!("fn_declaration"),
+            alias!("struct_declaration"),
+            terminal!("EOF")
         )
     );
 
     rule!(
-        "term",
+        "fn_declaration",
+        sequence!(
+            terminal!("FN"),
+            terminal!("IDENT"),
+            terminal!("LPAREN"),
+            terminal!("RPAREN"),
+            terminal!("SEMICOLON")
+        )
+    );
+
+    rule!(
+        "struct_declaration",
+        sequence!(
+            terminal!("STRUCT"),
+            terminal!("IDENT"),
+            terminal!("LBRACE"),
+            alias!("struct_fields"),
+            terminal!("RBRACE")
+        )
+    );
+
+    rule!(
+        "struct_fields",
         choice!(
-            sequence!(terminal!("MINUS"), terminal!("IDENT")),
-            terminal!("IDENT")
+            alias!("struct_field"),
+            sequence!(
+                alias!("struct_field"),
+                terminal!("COMMA"),
+                recursion!("struct_fields")
+            )
+        )
+    );
+
+    rule!(
+        "struct_field",
+        sequence!(
+            terminal!("IDENT"),
+            terminal!("COLON"),
+            alias!("field_type"),
+            terminal!("SEMICOLON")
+        )
+    );
+
+    rule!(
+        "field_type",
+        choice!(
+            terminal!("IDENT"),
+            sequence!(
+                terminal!("VEC"),
+                terminal!("LT"),
+                terminal!("IDENT"),
+                terminal!("GT")
+            )
         )
     );
 
