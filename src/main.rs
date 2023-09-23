@@ -1,7 +1,6 @@
 use llkraft::*;
 use petgraph::dot::{Config, Dot};
-use std::rc::Rc;
-use std::{collections::LinkedList, process::Command};
+use std::process::Command;
 
 fn main() {
     let mut grammar = GrammarBuilder::new();

@@ -197,25 +197,24 @@ fn traverse_path(
     }
 }
 
-// TODO: Should fix macros needing caller to import crates.
 #[macro_export]
 macro_rules! token {
     ($token:expr) => {
-        GrammarRule::Node(Rc::new(GrammarNode::Token($token.into())))
+        GrammarRule::Node(std::rc::Rc::new(GrammarNode::Token($token.into())))
     };
 }
 
 #[macro_export]
 macro_rules! alias {
     ($alias:expr) => {
-        GrammarRule::Node(Rc::new(GrammarNode::Alias($alias.into())))
+        GrammarRule::Node(std::rc::Rc::new(GrammarNode::Alias($alias.into())))
     };
 }
 
 #[macro_export]
 macro_rules! leaf {
     ($alias:expr) => {
-        GrammarRule::Node(Rc::new(GrammarNode::Leaf($alias.into())))
+        GrammarRule::Node(std::rc::Rc::new(GrammarNode::Leaf($alias.into())))
     };
 }
 
@@ -229,7 +228,7 @@ macro_rules! optional {
 #[macro_export]
 macro_rules! sequence {
     ($($x:expr),*) => {{
-        let mut list = LinkedList::new();
+        let mut list = std::collections::LinkedList::new();
 
         $(
             list.push_back($x);
