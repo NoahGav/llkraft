@@ -17,12 +17,13 @@ pub enum GrammarNode {
 
 #[derive(Debug, Clone)]
 pub enum GrammarPath {
+    Optional(Box<GrammarRule>),
     Sequence(LinkedList<GrammarRule>),
     Choice(Vec<GrammarRule>),
 }
 
 pub struct GrammarBuilder {
-    pub entry_name: Option<String>,
+    entry_name: Option<String>,
     pub rules: HashMap<String, GrammarRule>,
 }
 
@@ -34,13 +35,13 @@ impl GrammarBuilder {
         }
     }
 
-    pub fn entry_rule(&mut self, alias: String, rule: GrammarRule) {
-        self.entry_name = Some(alias.clone());
-        self.rules.insert(alias, rule);
+    pub fn entry_rule(&mut self, alias: &str, rule: GrammarRule) {
+        self.entry_name = Some(alias.into());
+        self.rules.insert(alias.into(), rule);
     }
 
-    pub fn add_rule(&mut self, alias: String, rule: GrammarRule) {
-        self.rules.insert(alias, rule);
+    pub fn add_rule(&mut self, alias: &str, rule: GrammarRule) {
+        self.rules.insert(alias.into(), rule);
     }
 
     pub fn to_digraph(&self) -> DiGraph<GrammarNode, ()> {
@@ -106,6 +107,19 @@ fn traverse_path(
     continuation: Option<LinkedList<GrammarRule>>,
 ) {
     match path {
+        GrammarPath::Optional(rule) => {
+            if let Some(continuation) = continuation.clone() {
+                traverse_rule(
+                    graph,
+                    rules,
+                    parent,
+                    continuation.front().unwrap(),
+                    Some(continuation.clone().split_off(1)),
+                )
+            }
+
+            traverse_rule(graph, rules, parent, rule, continuation);
+        }
         GrammarPath::Sequence(elements) => {
             if elements.len() > 0 {
                 let rule = elements.front().unwrap();
@@ -126,19 +140,6 @@ fn traverse_path(
     }
 }
 
-// #[macro_export]
-// macro_rules! grammar {
-//     ($($rule:expr),*) => {{
-//         let mut grammar = GrammarBuilder::new();
-
-//         $(
-//             grammar.add_rule($rule.0.into(), $rule.1);
-//         )+
-
-//         to_digraph(grammar.rules, "".into())
-//     }};
-// }
-
 #[macro_export]
 macro_rules! terminal {
     ($token:expr) => {
@@ -157,6 +158,13 @@ macro_rules! alias {
 macro_rules! leaf {
     ($alias:expr) => {
         GrammarRule::Node(GrammarNode::Leaf($alias.into()))
+    };
+}
+
+#[macro_export]
+macro_rules! optional {
+    ($rule:expr) => {
+        GrammarRule::Path(GrammarPath::Optional(Box::new($rule)))
     };
 }
 

@@ -2,21 +2,24 @@ use llkraft::*;
 use petgraph::dot::{Config, Dot};
 use std::{collections::LinkedList, process::Command};
 
+// program = decl | EOF
+// decl = fn | struct
+
 fn main() {
     let mut grammar = GrammarBuilder::new();
 
-    grammar.entry_rule(
-        "expr".into(),
-        sequence!(alias!("term"), terminal!("PLUS"), leaf!("expr")),
-    );
+    grammar.entry_rule("entry", sequence!(alias!("decl"), terminal!("EOF")));
 
     grammar.add_rule(
-        "term".into(),
-        choice!(
-            terminal!("IDENT"),
-            sequence!(terminal!("MINUS"), terminal!("IDENT"))
+        "decl",
+        sequence!(
+            optional!(terminal!("EXPORT")),
+            choice!(alias!("fn"), alias!("struct"))
         ),
     );
+
+    grammar.add_rule("fn", terminal!("FN"));
+    grammar.add_rule("struct", terminal!("STRUCT"));
 
     let graph = grammar.to_digraph();
 
