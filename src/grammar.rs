@@ -3,6 +3,7 @@ use petgraph::prelude::{DiGraph, NodeIndex};
 
 use std::{
     collections::{HashMap, HashSet, LinkedList},
+    fmt::Debug,
     rc::Rc,
 };
 
@@ -13,11 +14,32 @@ pub enum GrammarRule {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum GrammarNode {
-    Root(String),
+pub enum GrammarNodeKind {
+    Root,
     Token(String),
     Alias(String),
     Recursion(String),
+}
+
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub struct GrammarNode {
+    pub kind: GrammarNodeKind,
+    pub syntax_name: String,
+}
+
+impl Debug for GrammarNode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self.kind {
+            GrammarNodeKind::Root => f.write_str(&self.syntax_name),
+            GrammarNodeKind::Token(token) => {
+                f.write_str(&format!("{}({})", self.syntax_name, token))
+            }
+            GrammarNodeKind::Alias(alias) => f.write_str(&format!("alias({})", alias)),
+            GrammarNodeKind::Recursion(alias) => {
+                f.write_str(&format!("{}({})", self.syntax_name, alias))
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -33,12 +55,14 @@ pub struct GrammarTree {
 }
 
 pub struct GrammarBuilder {
+    pub current_rule: String,
     pub rules: HashMap<String, GrammarRule>,
 }
 
 impl GrammarBuilder {
     pub fn new() -> Self {
         Self {
+            current_rule: "".into(),
             rules: HashMap::new(),
         }
     }
@@ -52,7 +76,11 @@ impl GrammarBuilder {
         let mut roots = HashMap::new();
 
         for (alias, rule) in &self.rules {
-            let root = graph.add_node(GrammarNode::Root(alias.clone()));
+            let root = graph.add_node(GrammarNode {
+                kind: GrammarNodeKind::Root,
+                syntax_name: alias.clone(),
+            });
+
             let mut cache = HashMap::new();
 
             traverse_rule(&mut graph, &mut cache, &self.rules, root, rule, None, false);
@@ -131,8 +159,8 @@ fn traverse_node(
         return;
     }
 
-    match node.as_ref() {
-        GrammarNode::Token(_) => {
+    match &node.as_ref().kind {
+        GrammarNodeKind::Token(_) => {
             let node_idx = graph.add_node(node.as_ref().clone());
             graph.add_edge(parent, node_idx, ());
 
@@ -145,19 +173,15 @@ fn traverse_node(
                 traverse_rule(graph, cache, rules, node_idx, &sequence, None, false);
             }
         }
-        GrammarNode::Alias(alias) => {
+        GrammarNodeKind::Alias(alias) => {
+            let node = graph.add_node(node.as_ref().clone());
+            graph.add_edge(parent, node, ());
+
             let rule = rules.get(alias).unwrap();
-            traverse_rule(
-                graph,
-                cache,
-                rules,
-                parent,
-                rule,
-                continuation,
-                start_choice,
-            );
+
+            traverse_rule(graph, cache, rules, node, rule, continuation, start_choice);
         }
-        GrammarNode::Recursion(_) => {
+        GrammarNodeKind::Recursion(_) => {
             let node_idx = graph.add_node(node.as_ref().clone());
             graph.add_edge(parent, node_idx, ());
 
@@ -235,49 +259,66 @@ fn traverse_path(
 }
 
 #[macro_export]
-macro_rules! token {
-    ($token:expr) => {
-        GrammarRule::Node(std::rc::Rc::new(GrammarNode::Token($token.into())))
-    };
-}
-
-#[macro_export]
-macro_rules! alias {
-    ($alias:expr) => {
-        GrammarRule::Node(std::rc::Rc::new(GrammarNode::Alias($alias.into())))
-    };
-}
-
-#[macro_export]
-macro_rules! recursion {
-    ($alias:expr) => {
-        GrammarRule::Node(std::rc::Rc::new(GrammarNode::Recursion($alias.into())))
-    };
-}
-
-#[macro_export]
-macro_rules! optional {
-    ($rule:expr) => {
-        GrammarRule::Path(GrammarPath::Optional(Box::new($rule)))
-    };
-}
-
-#[macro_export]
-macro_rules! sequence {
+macro_rules! grammar {
     ($($x:expr),*) => {{
-        let mut list = std::collections::LinkedList::new();
+        let mut grammar = GrammarBuilder::new();
+
+        macro_rules! token {
+            ($token:expr) => {
+                GrammarRule::Node(std::rc::Rc::new(GrammarNode {
+                    kind: GrammarNodeKind::Token($token.into()),
+                    syntax_name: grammar.current_rule.clone(),
+                }))
+            };
+        }
+
+        macro_rules! alias {
+            ($alias:expr) => {
+                GrammarRule::Node(std::rc::Rc::new(GrammarNode {
+                    kind: GrammarNodeKind::Alias($alias.into()),
+                    syntax_name: grammar.current_rule.clone(),
+                }))
+            };
+        }
+
+        macro_rules! recursion {
+            ($alias:expr) => {
+                GrammarRule::Node(std::rc::Rc::new(GrammarNode {
+                    kind: GrammarNodeKind::Recursion($alias.into()),
+                    syntax_name: grammar.current_rule.clone(),
+                }))
+            };
+        }
+
+        macro_rules! optional {
+            ($rule:expr) => {
+                GrammarRule::Path(GrammarPath::Optional(Box::new($rule)))
+            };
+        }
+
+        macro_rules! sequence {
+            ($$($$x:expr),*) => {{
+                let mut list = std::collections::LinkedList::new();
+
+                $$(
+                    list.push_back($$x);
+                )+
+
+                GrammarRule::Path(GrammarPath::Sequence(list))
+            }};
+        }
+
+        macro_rules! choice {
+            ($$($$x:expr),*) => {
+                GrammarRule::Path(GrammarPath::Choice(vec![$$($$x),*]))
+            };
+        }
 
         $(
-            list.push_back($x);
+            grammar.current_rule = $x.0.into();
+            grammar.add_rule($x.0.into(), $x.1);
         )+
 
-        GrammarRule::Path(GrammarPath::Sequence(list))
+        grammar
     }};
-}
-
-#[macro_export]
-macro_rules! choice {
-    ($($x:expr),*) => {
-        GrammarRule::Path(GrammarPath::Choice(vec![$($x),*]))
-    };
 }

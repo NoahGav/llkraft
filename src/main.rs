@@ -1,3 +1,5 @@
+#![feature(macro_metavar_expr)]
+
 use llkraft::*;
 use petgraph::dot::{Config, Dot};
 use petgraph::prelude::NodeIndex;
@@ -16,13 +18,13 @@ fn generate(tree: &GrammarTree, root: NodeIndex, code: &mut String, depth: usize
         for child in children {
             let weight = tree.graph.node_weight(child).unwrap();
 
-            match weight {
-                GrammarNode::Token(token) => {
+            match &weight.kind {
+                GrammarNodeKind::Token(token) => {
                     *code += &format!("TokenKind::{} => {{", token);
                     generate(tree, child, code, depth + 1);
                     *code += "}";
                 }
-                GrammarNode::Recursion(_) => todo!(),
+                GrammarNodeKind::Recursion(_) => todo!(),
                 _ => unreachable!(),
             }
         }
@@ -33,12 +35,12 @@ fn generate(tree: &GrammarTree, root: NodeIndex, code: &mut String, depth: usize
         let child = children.first().unwrap().clone();
         let weight = tree.graph.node_weight(child).unwrap();
 
-        match weight {
-            GrammarNode::Token(token) => {
+        match &weight.kind {
+            GrammarNodeKind::Token(token) => {
                 *code += &format!("let token_{} = expect(TokenKind::{});", depth, token);
                 generate(tree, child, code, depth + 1);
             }
-            GrammarNode::Recursion(alias) => {
+            GrammarNodeKind::Recursion(alias) => {
                 *code += &format!("let {}_{} = parse_{}();", alias, depth, alias);
                 generate(tree, child, code, depth + 1);
             }
@@ -48,33 +50,37 @@ fn generate(tree: &GrammarTree, root: NodeIndex, code: &mut String, depth: usize
 }
 
 fn main() {
-    let mut grammar = GrammarBuilder::new();
-
-    grammar.add_rule("expr_stmt", sequence!(alias!("expr"), token!("SEMICOLON")));
-
-    grammar.add_rule(
-        "expr",
-        choice!(
-            alias!("term"),
+    let grammar = grammar!(
+        (
+            "expr_stmt",
             sequence!(
-                alias!("term"),
-                choice!(token!("PLUS"), token!("MINUS")),
-                recursion!("expr")
+                optional!(sequence!(alias!("expr"), token!("SEMICOLON"))),
+                token!("EOF")
             )
         ),
-    );
-
-    grammar.add_rule(
-        "term",
-        sequence!(optional!(token!("MINUS")), token!("IDENT")),
+        (
+            "expr",
+            choice!(
+                alias!("term"),
+                sequence!(
+                    alias!("term"),
+                    choice!(token!("PLUS"), token!("MINUS")),
+                    recursion!("expr")
+                )
+            )
+        ),
+        (
+            "term",
+            sequence!(optional!(token!("MINUS")), token!("IDENT"))
+        )
     );
 
     let tree = grammar.to_digraph();
-    let root = tree.roots.get("expr_stmt").unwrap().clone();
+    // let root = tree.roots.get("expr_stmt").unwrap().clone();
 
-    let mut code = String::new();
-    generate(&tree, root, &mut code, 0);
-    println!("{}", code);
+    // let mut code = String::new();
+    // generate(&tree, root, &mut code, 0);
+    // println!("{}", code);
 
     std::fs::write(
         "output.dot",
