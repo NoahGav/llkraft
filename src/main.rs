@@ -55,23 +55,26 @@ fn main() {
             "expr_stmt",
             sequence!(
                 optional!(sequence!(alias!("expr"), token!("SEMICOLON"))),
-                token!("EOF")
+                eoi!()
             )
         ),
         (
             "expr",
-            choice!(
-                alias!("term"),
-                sequence!(
+            sequence!(
+                choice!(
                     alias!("term"),
-                    choice!(token!("PLUS"), token!("MINUS")),
-                    recursion!("expr")
-                )
+                    sequence!(
+                        alias!("term"),
+                        choice!(token!("PLUS"), token!("MINUS")),
+                        recursion!("expr")
+                    )
+                ),
+                eoi!()
             )
         ),
         (
             "term",
-            sequence!(optional!(token!("MINUS")), token!("IDENT"))
+            sequence!(optional!(token!("MINUS")), token!("IDENT"), eoi!())
         )
     );
 

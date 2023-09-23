@@ -19,6 +19,7 @@ pub enum GrammarNodeKind {
     Token(String),
     Alias(String),
     Recursion(String),
+    EOI,
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]
@@ -35,9 +36,8 @@ impl Debug for GrammarNode {
                 f.write_str(&format!("{}({})", self.syntax_name, token))
             }
             GrammarNodeKind::Alias(alias) => f.write_str(&format!("alias({})", alias)),
-            GrammarNodeKind::Recursion(alias) => {
-                f.write_str(&format!("{}({})", self.syntax_name, alias))
-            }
+            GrammarNodeKind::Recursion(alias) => f.write_str(&format!("recursion({})", alias)),
+            GrammarNodeKind::EOI => f.write_str(&format!("{}(EOI)", self.syntax_name)),
         }
     }
 }
@@ -160,7 +160,7 @@ fn traverse_node(
     }
 
     match &node.as_ref().kind {
-        GrammarNodeKind::Token(_) => {
+        GrammarNodeKind::Token(_) | GrammarNodeKind::EOI => {
             let node_idx = graph.add_node(node.as_ref().clone());
             graph.add_edge(parent, node_idx, ());
 
@@ -311,6 +311,15 @@ macro_rules! grammar {
         macro_rules! choice {
             ($$($$x:expr),*) => {
                 GrammarRule::Path(GrammarPath::Choice(vec![$$($$x),*]))
+            };
+        }
+
+        macro_rules! eoi {
+            () => {
+                GrammarRule::Node(std::rc::Rc::new(GrammarNode {
+                    kind: GrammarNodeKind::EOI,
+                    syntax_name: grammar.current_rule.clone(),
+                }))
             };
         }
 
