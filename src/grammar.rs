@@ -325,7 +325,7 @@ macro_rules! grammar {
 
         $(
             grammar.current_rule = $x.0.into();
-            grammar.add_rule($x.0.into(), $x.1);
+            grammar.add_rule($x.0.into(), sequence!($x.1, eoi!()));
         )+
 
         grammar

@@ -53,28 +53,22 @@ fn main() {
     let grammar = grammar!(
         (
             "expr_stmt",
-            sequence!(
-                optional!(sequence!(alias!("expr"), token!("SEMICOLON"))),
-                eoi!()
-            )
+            optional!(sequence!(alias!("expr"), token!("SEMICOLON")))
         ),
         (
             "expr",
-            sequence!(
-                choice!(
+            choice!(
+                alias!("term"),
+                sequence!(
                     alias!("term"),
-                    sequence!(
-                        alias!("term"),
-                        choice!(token!("PLUS"), token!("MINUS")),
-                        recursion!("expr")
-                    )
-                ),
-                eoi!()
+                    choice!(token!("PLUS"), token!("MINUS")),
+                    recursion!("expr")
+                )
             )
         ),
         (
             "term",
-            sequence!(optional!(token!("MINUS")), token!("IDENT"), eoi!())
+            sequence!(optional!(token!("MINUS")), token!("IDENT"))
         )
     );
 
