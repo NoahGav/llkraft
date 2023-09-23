@@ -17,8 +17,7 @@ pub enum GrammarNode {
     Root(String),
     Token(String),
     Alias(String),
-    // TODO: Rename because it doesn't actually represent a leaf node.
-    Leaf(String),
+    Recursion(String),
 }
 
 #[derive(Debug, Clone)]
@@ -126,7 +125,7 @@ fn traverse_node(
                 start_choice,
             );
         }
-        GrammarNode::Leaf(_) => {
+        GrammarNode::Recursion(_) => {
             let node_idx = graph.add_node(node.as_ref().clone());
             graph.add_edge(parent, node_idx, ());
 
@@ -218,9 +217,9 @@ macro_rules! alias {
 }
 
 #[macro_export]
-macro_rules! leaf {
+macro_rules! recursion {
     ($alias:expr) => {
-        GrammarRule::Node(std::rc::Rc::new(GrammarNode::Leaf($alias.into())))
+        GrammarRule::Node(std::rc::Rc::new(GrammarNode::Recursion($alias.into())))
     };
 }
 

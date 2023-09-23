@@ -14,7 +14,7 @@ fn main() {
         "params'",
         optional!(choice!(
             alias!("param"),
-            sequence!(alias!("param"), token!("COMMA"), leaf!("params'"))
+            sequence!(alias!("param"), token!("COMMA"), recursion!("params'"))
         )),
     );
 
