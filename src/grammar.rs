@@ -91,10 +91,11 @@ fn traverse_node(
     if let Some(node) = cache.get(&ByAddress(node.clone())) {
         graph.add_edge(parent, node.clone(), ());
 
-        if let Some(continuation) = continuation {
-            let sequence = GrammarRule::Path(GrammarPath::Sequence(continuation));
-            traverse_rule(graph, cache, rules, node.clone(), &sequence, None, false);
-        }
+        // TODO: Make sure this isn't a problem (removing it).
+        // if let Some(continuation) = continuation {
+        //     let sequence = GrammarRule::Path(GrammarPath::Sequence(continuation));
+        //     traverse_rule(graph, cache, rules, node.clone(), &sequence, None, false);
+        // }
 
         return;
     }

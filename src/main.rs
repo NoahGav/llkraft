@@ -6,21 +6,29 @@ fn main() {
     let mut grammar = GrammarBuilder::new();
 
     grammar.add_rule(
-        "params",
-        sequence!(token!("L_PAREN"), alias!("params'"), token!("R_PAREN")),
+        "expr",
+        sequence!(alias!("term"), alias!("op"), recursion!("expr")),
     );
+
+    grammar.add_rule("term", sequence!(optional!(token!("-")), token!("IDENT")));
+
+    // grammar.add_rule(
+    //     "term",
+    //     choice!(token!("IDENT"), sequence!(token!("MINUS"), token!("IDENT"))),
+    // );
 
     grammar.add_rule(
-        "params'",
-        optional!(choice!(
-            alias!("param"),
-            sequence!(alias!("param"), token!("COMMA"), recursion!("params'"))
-        )),
+        "op",
+        choice!(token!("+"), token!("-"), token!("*"), token!("/")),
     );
 
-    grammar.add_rule("param", token!("IDENT"));
-
     let graph = grammar.to_digraph();
+
+    // TODO: It is now finished. The graph produced represents the grammar
+    // TODO: correctly. Now all we have to do is create a generator that
+    // TODO: traverse this graph and generates the actual parser (also we
+    // TODO: have to add rule names to nodes because that's important
+    // TODO: to know what syntax node was finished being parsed).
 
     std::fs::write(
         "output.dot",
