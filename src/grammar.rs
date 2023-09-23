@@ -2,7 +2,7 @@ use by_address::ByAddress;
 use petgraph::prelude::{DiGraph, NodeIndex};
 
 use std::{
-    collections::{HashMap, LinkedList},
+    collections::{HashMap, HashSet, LinkedList},
     rc::Rc,
 };
 
@@ -12,7 +12,7 @@ pub enum GrammarRule {
     Path(GrammarPath),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum GrammarNode {
     Root(String),
     Token(String),
@@ -25,6 +25,11 @@ pub enum GrammarPath {
     Optional(Box<GrammarRule>),
     Sequence(LinkedList<GrammarRule>),
     Choice(Vec<GrammarRule>),
+}
+
+pub struct GrammarTree {
+    pub graph: DiGraph<GrammarNode, ()>,
+    pub roots: HashMap<String, NodeIndex>,
 }
 
 pub struct GrammarBuilder {
@@ -42,17 +47,41 @@ impl GrammarBuilder {
         self.rules.insert(alias.into(), rule);
     }
 
-    pub fn to_digraph(&self) -> DiGraph<GrammarNode, ()> {
+    pub fn to_digraph(&self) -> GrammarTree {
         let mut graph = DiGraph::new();
+        let mut roots = HashMap::new();
 
         for (alias, rule) in &self.rules {
             let root = graph.add_node(GrammarNode::Root(alias.clone()));
             let mut cache = HashMap::new();
 
             traverse_rule(&mut graph, &mut cache, &self.rules, root, rule, None, false);
+
+            clean(&mut graph, root);
+            roots.insert(alias.clone(), root);
         }
 
-        graph
+        GrammarTree { graph, roots }
+    }
+}
+
+fn clean(graph: &mut DiGraph<GrammarNode, ()>, node: NodeIndex) {
+    let mut children = Vec::new();
+
+    for child in graph.neighbors(node) {
+        let weight = graph.node_weight(child).unwrap();
+        children.push((child, weight.clone()));
+    }
+
+    let mut child_set = HashSet::new();
+
+    for child in children {
+        if child_set.contains(&child.1) {
+            graph.remove_node(child.0);
+        } else {
+            child_set.insert(child.1);
+            clean(graph, child.0);
+        }
     }
 }
 
@@ -89,13 +118,15 @@ fn traverse_node(
     start_choice: bool,
 ) {
     if let Some(node) = cache.get(&ByAddress(node.clone())) {
-        graph.add_edge(parent, node.clone(), ());
+        // Make sure not to duplicate edges.
+        if graph.edges_connecting(parent, node.clone()).count() == 0 {
+            graph.add_edge(parent, node.clone(), ());
+        }
 
-        // TODO: Make sure this isn't a problem (removing it).
-        // if let Some(continuation) = continuation {
-        //     let sequence = GrammarRule::Path(GrammarPath::Sequence(continuation));
-        //     traverse_rule(graph, cache, rules, node.clone(), &sequence, None, false);
-        // }
+        if let Some(continuation) = continuation {
+            let sequence = GrammarRule::Path(GrammarPath::Sequence(continuation));
+            traverse_rule(graph, cache, rules, node.clone(), &sequence, None, false);
+        }
 
         return;
     }
