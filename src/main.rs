@@ -6,18 +6,20 @@ use std::{collections::LinkedList, process::Command};
 fn main() {
     let mut grammar = GrammarBuilder::new();
 
-    grammar.entry_rule("entry", sequence!(alias!("decl"), terminal!("EOF")));
-
     grammar.add_rule(
-        "decl",
-        sequence!(
-            optional!(terminal!("EXPORT")),
-            choice!(alias!("fn"), alias!("struct"))
-        ),
+        "params",
+        sequence!(token!("L_PAREN"), alias!("params'"), token!("R_PAREN")),
     );
 
-    grammar.add_rule("fn", terminal!("FN"));
-    grammar.add_rule("struct", terminal!("STRUCT"));
+    grammar.add_rule(
+        "params'",
+        optional!(choice!(
+            alias!("param"),
+            sequence!(alias!("param"), token!("COMMA"), leaf!("params'"))
+        )),
+    );
+
+    grammar.add_rule("param", token!("IDENT"));
 
     let graph = grammar.to_digraph();
 

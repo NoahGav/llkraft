@@ -15,7 +15,7 @@ pub enum GrammarRule {
 #[derive(Debug, Clone)]
 pub enum GrammarNode {
     Root(String),
-    Terminal(String),
+    Token(String),
     Alias(String),
     Leaf(String),
 }
@@ -28,21 +28,14 @@ pub enum GrammarPath {
 }
 
 pub struct GrammarBuilder {
-    entry_name: Option<String>,
     pub rules: HashMap<String, GrammarRule>,
 }
 
 impl GrammarBuilder {
     pub fn new() -> Self {
         Self {
-            entry_name: None,
             rules: HashMap::new(),
         }
-    }
-
-    pub fn entry_rule(&mut self, alias: &str, rule: GrammarRule) {
-        self.entry_name = Some(alias.into());
-        self.rules.insert(alias.into(), rule);
     }
 
     pub fn add_rule(&mut self, alias: &str, rule: GrammarRule) {
@@ -52,12 +45,12 @@ impl GrammarBuilder {
     pub fn to_digraph(&self) -> DiGraph<GrammarNode, ()> {
         let mut graph = DiGraph::new();
 
-        let entry_name = self.entry_name.clone().unwrap();
-        let entry = self.rules.get(&entry_name).unwrap();
-        let root = graph.add_node(GrammarNode::Root(entry_name));
-        let mut cache = HashMap::new();
+        for (alias, rule) in &self.rules {
+            let root = graph.add_node(GrammarNode::Root(alias.clone()));
+            let mut cache = HashMap::new();
 
-        traverse_rule(&mut graph, &mut cache, &self.rules, root, entry, None);
+            traverse_rule(&mut graph, &mut cache, &self.rules, root, rule, None, false);
+        }
 
         graph
     }
@@ -70,11 +63,18 @@ fn traverse_rule(
     parent: NodeIndex,
     rule: &GrammarRule,
     continuation: Option<LinkedList<GrammarRule>>,
+    start_choice: bool,
 ) {
     match rule {
-        GrammarRule::Node(node) => {
-            traverse_node(graph, cache, rules, parent, node.clone(), continuation)
-        }
+        GrammarRule::Node(node) => traverse_node(
+            graph,
+            cache,
+            rules,
+            parent,
+            node.clone(),
+            continuation,
+            start_choice,
+        ),
         GrammarRule::Path(path) => traverse_path(graph, cache, rules, parent, path, continuation),
     }
 }
@@ -86,31 +86,52 @@ fn traverse_node(
     parent: NodeIndex,
     node: Rc<GrammarNode>,
     continuation: Option<LinkedList<GrammarRule>>,
+    start_choice: bool,
 ) {
     if let Some(node) = cache.get(&ByAddress(node.clone())) {
         graph.add_edge(parent, node.clone(), ());
+
+        if let Some(continuation) = continuation {
+            let sequence = GrammarRule::Path(GrammarPath::Sequence(continuation));
+            traverse_rule(graph, cache, rules, node.clone(), &sequence, None, false);
+        }
+
         return;
     }
 
     match node.as_ref() {
-        GrammarNode::Terminal(_) => {
+        GrammarNode::Token(_) => {
             let node_idx = graph.add_node(node.as_ref().clone());
             graph.add_edge(parent, node_idx, ());
-            cache.insert(ByAddress(node), node_idx);
+
+            if !start_choice {
+                cache.insert(ByAddress(node), node_idx);
+            }
 
             if let Some(continuation) = continuation {
                 let sequence = GrammarRule::Path(GrammarPath::Sequence(continuation));
-                traverse_rule(graph, cache, rules, node_idx, &sequence, None);
+                traverse_rule(graph, cache, rules, node_idx, &sequence, None, false);
             }
         }
         GrammarNode::Alias(alias) => {
             let rule = rules.get(alias).unwrap();
-            traverse_rule(graph, cache, rules, parent, rule, continuation);
+            traverse_rule(
+                graph,
+                cache,
+                rules,
+                parent,
+                rule,
+                continuation,
+                start_choice,
+            );
         }
         GrammarNode::Leaf(_) => {
             let node_idx = graph.add_node(node.as_ref().clone());
             graph.add_edge(parent, node_idx, ());
-            cache.insert(ByAddress(node), node_idx);
+
+            if !start_choice {
+                cache.insert(ByAddress(node), node_idx);
+            }
         }
         _ => unreachable!(),
     };
@@ -134,10 +155,11 @@ fn traverse_path(
                     parent,
                     continuation.front().unwrap(),
                     Some(continuation.clone().split_off(1)),
+                    false,
                 )
             }
 
-            traverse_rule(graph, cache, rules, parent, rule, continuation);
+            traverse_rule(graph, cache, rules, parent, rule, continuation, false);
         }
         GrammarPath::Sequence(elements) => {
             if elements.len() > 0 {
@@ -148,12 +170,28 @@ fn traverse_path(
                     new_continuation.extend(continuation);
                 }
 
-                traverse_rule(graph, cache, rules, parent, rule, Some(new_continuation));
+                traverse_rule(
+                    graph,
+                    cache,
+                    rules,
+                    parent,
+                    rule,
+                    Some(new_continuation),
+                    false,
+                );
             }
         }
         GrammarPath::Choice(options) => {
             for option in options {
-                traverse_rule(graph, cache, rules, parent, option, continuation.clone());
+                traverse_rule(
+                    graph,
+                    cache,
+                    rules,
+                    parent,
+                    option,
+                    continuation.clone(),
+                    true,
+                );
             }
         }
     }
@@ -161,9 +199,9 @@ fn traverse_path(
 
 // TODO: Should fix macros needing caller to import crates.
 #[macro_export]
-macro_rules! terminal {
+macro_rules! token {
     ($token:expr) => {
-        GrammarRule::Node(Rc::new(GrammarNode::Terminal($token.into())))
+        GrammarRule::Node(Rc::new(GrammarNode::Token($token.into())))
     };
 }
 
@@ -177,7 +215,7 @@ macro_rules! alias {
 #[macro_export]
 macro_rules! leaf {
     ($alias:expr) => {
-        GrammarRule::Node(GrammarNode::Leaf($alias.into()))
+        GrammarRule::Node(Rc::new(GrammarNode::Leaf($alias.into())))
     };
 }
 
