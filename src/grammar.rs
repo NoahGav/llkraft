@@ -17,6 +17,7 @@ pub enum GrammarNode {
     Root(String),
     Token(String),
     Alias(String),
+    // TODO: Rename because it doesn't actually represent a leaf node.
     Leaf(String),
 }
 
@@ -131,6 +132,11 @@ fn traverse_node(
 
             if !start_choice {
                 cache.insert(ByAddress(node), node_idx);
+            }
+
+            if let Some(continuation) = continuation {
+                let sequence = GrammarRule::Path(GrammarPath::Sequence(continuation));
+                traverse_rule(graph, cache, rules, node_idx, &sequence, None, false);
             }
         }
         _ => unreachable!(),
