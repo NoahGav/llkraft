@@ -1,9 +1,7 @@
 use llkraft::*;
 use petgraph::dot::{Config, Dot};
+use std::rc::Rc;
 use std::{collections::LinkedList, process::Command};
-
-// program = decl | EOF
-// decl = fn | struct
 
 fn main() {
     let mut grammar = GrammarBuilder::new();
